@@ -1,23 +1,3 @@
-# bel-framework/bel-scan
-
-Generic scanner for Erlang.
-
-## Example
-
-The example below is simplistic and scans a string into a tokens list containing params and texts. Params are enclosed with two brackets, like `{{ foo }}`, and produces the token `{param, {Line, Column}, <<"foo">>}`. Texts, like `bar`, are scanned as `{text, {Line, Column}, <<"bar">>}`.
-
-The output of the [module](#module) of the example below is:
-
-```shell
-1> my_scan:string(<<"foo {{ bar }} baz">>).
-[{text,{1,1},<<"foo ">>},
- {param,{1,5},<<"bar">>},
- {text,{1,14},<<" baz">>}]
-```
-
-### Module
-
-```erlang
 -module(my_scan).
 -behaviour(bel_scan).
 
@@ -124,16 +104,3 @@ get_scan_loc(Scan) ->
     Ln = bel_scan:get_ln(Scan),
     Col = bel_scan:get_col(Scan),
     {Ln, Col}.
-```
-
-## Build
-
-```shell
-$ rebar3 compile
-```
-
-## Test
-
-```shell
-$ rebar3 eunit
-```

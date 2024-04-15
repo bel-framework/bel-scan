@@ -1,7 +1,7 @@
 %%%---------------------------------------------------------------------
 %%% @copyright 2024 William Fank Thomé
 %%% @author William Fank Thomé <willilamthome@hotmail.com>
-%%% @doc Generic binary parser.
+%%% @doc Generic scanner.
 %%%
 %%% Copyright 2024 William Fank Thomé
 %%%
@@ -19,12 +19,12 @@
 %%%
 %%% @end
 %%%---------------------------------------------------------------------
--module(bel_parser).
+-module(bel_scan).
 -compile(inline_list_funcs).
 
 % API
 -export([ new/1
-        , parse/2
+        , string/2
         , continue/2
         , terminate/1
         , new_ln/1
@@ -74,7 +74,7 @@
 
 -callback init(options()) -> {ok, metadata()}.
 
--callback handle_parse(char(), binary(), t()) -> t().
+-callback handle_char(char(), binary(), t()) -> t().
 
 -callback handle_tokens([token()], t()) -> result().
 
@@ -151,7 +151,7 @@
 new(Params) when ?is_params(Params) ->
     maps:fold(fun set/3, #state{}, maps:merge(?DEFAULTS, Params)).
 
-parse(Opts, #state{} = State) ->
+string(Opts, #state{} = State) ->
     Handler = State#state.handler,
     {ok, Metadata} = Handler:init(Opts),
     continue(State#state.input, State#state{metadata = Metadata}).
@@ -165,7 +165,7 @@ continue(<<$\n, Rest/bitstring>>, #state{} = State) ->
 continue(<<$\f, Rest/bitstring>>, #state{} = State) ->
     continue(Rest, new_ln(incr_col(State)));
 continue(<<Char, Rest/bitstring>>, #state{handler = Handler} = State) ->
-    Handler:handle_parse(Char, Rest, State);
+    Handler:handle_char(Char, Rest, State);
 continue(<<>>, #state{} = State) ->
     terminate(State).
 
@@ -308,7 +308,7 @@ set_len(Len, #state{} = State) when ?is_length(Len) ->
 %%%=====================================================================
 %%% Tests
 %%% TODO: All kind of missing tests.
-%%% TODO: Move tests to "../test/bel_parser_SUITE.erl".
+%%% TODO: Move tests to "../test/bel_scan_SUITE.erl".
 %%%=====================================================================
 
 -ifdef(TEST).
@@ -319,7 +319,7 @@ set_len(Len, #state{} = State) when ?is_length(Len) ->
 init([]) ->
     {ok, []}.
 
-handle_parse(_Char, Rest, State) ->
+handle_char(_Char, Rest, State) ->
     continue(Rest, incr_col(State)).
 
 handle_tokens(_Tokens, State) ->
@@ -349,10 +349,10 @@ new_test() ->
         }, new(params(<<>>)))}
     ].
 
-parse_test() ->
+string_test() ->
     Input = <<"foo\nbar">>,
-    State = parse([], new(params(Input))),
-    [ { "Should parse and return the tokens"
+    State = string([], new(params(Input))),
+    [ { "Should scan and return the tokens"
       , ?assertEqual([], get_tokens(State))}
     , { "Should return correct ln"
       , ?assertEqual(2, get_ln(State))}
