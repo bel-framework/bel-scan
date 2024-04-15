@@ -1,5 +1,5 @@
-{application, bel_parser, [
-    {description, "Generic binary parser lib"},
+{application, bel_scan, [
+    {description, "Generic scanner lib"},
     {vsn, "0.1.0"},
     {registered, []},
     {applications, [
@@ -10,7 +10,7 @@
     {modules, []},
     {licenses, ["Apache-2.0"]},
     {links, [
-        {"GitHub", "https://github.com/bel-framework/bel-parser"},
+        {"GitHub", "https://github.com/bel-framework/bel-scan"},
         {"Sponsor", "https://github.com/sponsors/williamthome"}
     ]}
 ]}.

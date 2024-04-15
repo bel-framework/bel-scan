@@ -1,7 +1,7 @@
 %%%---------------------------------------------------------------------
 %%% @copyright 2024 William Fank Thomé
 %%% @author William Fank Thomé <willilamthome@hotmail.com>
-%%% @doc bel_parser tests.
+%%% @doc bel_scan tests.
 %%%
 %%% Copyright 2024 William Fank Thomé
 %%%
@@ -19,7 +19,7 @@
 %%%
 %%% @end
 %%%---------------------------------------------------------------------
--module(bel_parser_SUITE).
+-module(bel_scan_SUITE).
 
 % -include_lib("common_test/include/ct.hrl").
 
@@ -34,7 +34,7 @@
 
 %% Test cases
 -export([ readme_example/1
-        % TODO: bel_parser tests
+        % TODO: bel_scan tests
         ]).
 
 %%%=====================================================================
@@ -130,7 +130,7 @@ end_per_testcase(_TestCase, _Config) ->
 
 all() ->
     [ readme_example
-    % TODO: bel_parser tests
+    % TODO: bel_scan tests
     ].
 
 %%%=====================================================================
@@ -141,7 +141,7 @@ readme_example(Config) when is_list(Config) ->
     [ {text,{1,1},<<"foo ">>}
     , {param,{1,5},<<"bar">>}
     , {text,{1,14},<<" baz">>}
-    ] = bel_parser_example:parse(<<"foo {{ bar }} baz">>),
+    ] = my_scan:string(<<"foo {{ bar }} baz">>),
     ok.
 
 %%%=====================================================================
