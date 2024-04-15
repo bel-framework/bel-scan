@@ -308,7 +308,7 @@ set_len(Len, #state{} = State) when ?is_length(Len) ->
 %%%=====================================================================
 %%% Tests
 %%% TODO: All kind of missing tests.
-%%% TODO: Move to "../test/" folder and as a common_test.
+%%% TODO: Move tests to "../test/bel_parser_SUITE.erl".
 %%%=====================================================================
 
 -ifdef(TEST).
