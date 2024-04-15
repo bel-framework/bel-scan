@@ -63,8 +63,8 @@
              , options/0
              , metadata/0
              , token/0
-             , ln/0
-             , col/0
+             , line/0
+             , column/0
              , position/0
              , length/0
              , result/0
@@ -124,8 +124,8 @@
                , handler    :: module()
                , metadata   :: metadata()
                , tokens     :: [token()]
-               , ln         :: ln()
-               , col        :: col()
+               , ln         :: line()
+               , col        :: column()
                , buffer_pos :: position()
                , pos        :: position()
                , len        :: length()
@@ -134,9 +134,9 @@
 -opaque t()      :: #state{}.
 -type options()  :: term().
 -type metadata() :: term().
--type token()    :: term().
--type ln()       :: pos_integer().
--type col()      :: pos_integer().
+-type token()    :: [term()].
+-type line()     :: pos_integer().
+-type column()   :: pos_integer().
 -type position() :: non_neg_integer().
 -type length()   :: non_neg_integer().
 -type result()   :: term().
