@@ -1,9 +1,19 @@
-bel_parser
-=====
+# Bel Parser
 
-An OTP library
+Generic binary parser for Erlang.
 
-Build
------
+## Usage
 
-    $ rebar3 compile
+
+
+## Build
+
+```console
+$ rebar3 compile
+```
+
+## Test
+
+```console
+$ rebar3 eunit
+```
