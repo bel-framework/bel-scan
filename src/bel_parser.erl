@@ -1,3 +1,24 @@
+%%%---------------------------------------------------------------------
+%%% @copyright 2024 William Fank Thomé
+%%% @author William Fank Thomé <willilamthome@hotmail.com>
+%%% @doc Generic binary parser.
+%%%
+%%% Copyright 2024 William Fank Thomé
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
+%%% @end
+%%%---------------------------------------------------------------------
 -module(bel_parser).
 -compile(inline_list_funcs).
 
@@ -53,7 +74,7 @@
 
 -callback init(options()) -> {ok, metadata()}.
 
--callback handle_parse(binary(), t()) -> t().
+-callback handle_parse(char(), binary(), t()) -> t().
 
 -callback handle_tokens([token()], t()) -> result().
 
@@ -123,6 +144,9 @@
 %%%=====================================================================
 %%% API
 %%%=====================================================================
+
+% Fixes no return warning because of the false positive of the #state{}.
+-dialyzer({nowarn_function, [new/1]}).
 
 new(Params) when ?is_params(Params) ->
     maps:fold(fun set/3, #state{}, maps:merge(?DEFAULTS, Params)).
@@ -284,7 +308,7 @@ set_len(Len, #state{} = State) when ?is_length(Len) ->
 %%%=====================================================================
 %%% Tests
 %%% TODO: All kind of missing tests.
-%%% TODO: Move to "../test/" folder and as a common_test.
+%%% TODO: Move tests to "../test/bel_parser_SUITE.erl".
 %%%=====================================================================
 
 -ifdef(TEST).

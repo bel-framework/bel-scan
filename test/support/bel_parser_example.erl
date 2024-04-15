@@ -1,23 +1,3 @@
-# Bel Parser
-
-Generic binary parser for Erlang.
-
-## Example
-
-The example below is simplistic and parses a string into a tokens list containing params and texts. Params are enclosed with two brackets, like `{{ foo }}`, and produces the token `{param, {Line, Column}, <<"foo">>}`. Texts, like `bar`, are parsed as `{text, {Line, Column}, <<"bar">>}`.
-
-The output of the [module](#module) of the example below is:
-
-```shell
-1> bel_parser_example:parse(<<"foo {{ bar }} baz">>).
-[{text,{1,1},<<"foo ">>},
- {param,{1,5},<<"bar">>},
- {text,{1,14},<<" baz">>}]
-```
-
-### Module
-
-```erlang
 -module(bel_parser_example).
 -behaviour(bel_parser).
 
@@ -124,16 +104,3 @@ get_parser_loc(Parser) ->
     Ln = bel_parser:get_ln(Parser),
     Col = bel_parser:get_col(Parser),
     {Ln, Col}.
-```
-
-## Build
-
-```shell
-$ rebar3 compile
-```
-
-## Test
-
-```shell
-$ rebar3 eunit
-```
