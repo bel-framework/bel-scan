@@ -145,6 +145,9 @@
 %%% API
 %%%=====================================================================
 
+% Fixes no return warning because of the false positive of the #state{}.
+-dialyzer({nowarn_function, [new/1]}).
+
 new(Params) when ?is_params(Params) ->
     maps:fold(fun set/3, #state{}, maps:merge(?DEFAULTS, Params)).
 
