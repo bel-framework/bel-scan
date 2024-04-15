@@ -74,7 +74,7 @@
 
 -callback init(options()) -> {ok, metadata()}.
 
--callback handle_parse(binary(), t()) -> t().
+-callback handle_parse(char(), binary(), t()) -> t().
 
 -callback handle_tokens([token()], t()) -> result().
 
