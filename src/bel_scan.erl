@@ -30,6 +30,7 @@
         , new_ln/1
         , incr_col/1
         , incr_col/2
+        , snapshot/1
         , update_pos/1
         , pos_text/1
         , push_token/2
@@ -51,6 +52,10 @@
         , set_ln/2
         , get_col/1
         , set_col/2
+        , get_loc/1
+        , set_loc/2
+        , get_snap_loc/1
+        , set_snap_loc/2
         , get_buffer_pos/1
         , set_buffer_pos/2
         , get_pos/1
@@ -65,6 +70,7 @@
              , token/0
              , line/0
              , column/0
+             , location/0
              , position/0
              , length/0
              , result/0
@@ -113,6 +119,7 @@
     tokens => [],
     ln => 1,
     col => 1,
+    snap_loc => {1, 1},
     buffer_pos => 0,
     pos => 0,
     len => 0
@@ -126,6 +133,7 @@
                , tokens     :: [token()]
                , ln         :: line()
                , col        :: column()
+               , snap_loc   :: location()
                , buffer_pos :: position()
                , pos        :: position()
                , len        :: length()
@@ -137,6 +145,7 @@
 -type token()    :: [term()].
 -type line()     :: pos_integer().
 -type column()   :: pos_integer().
+-type location() :: {line(), column()}.
 -type position() :: non_neg_integer().
 -type length()   :: non_neg_integer().
 -type result()   :: term().
@@ -188,6 +197,11 @@ incr_col(N, #state{} = State) when ?is_col(N) ->
         len        = State#state.len+N
     }.
 
+snapshot(#state{} = State) ->
+    State#state{
+        snap_loc = {State#state.ln, State#state.col}
+    }.
+
 update_pos(#state{} = State) ->
     State#state{
         pos = State#state.buffer_pos,
@@ -219,6 +233,10 @@ get(ln, State) ->
     get_ln(State);
 get(col, State) ->
     get_col(State);
+get(loc, State) ->
+    get_loc(State);
+get(snap_loc, State) ->
+    get_snap_loc(State);
 get(buffer_pos, State) ->
     get_buffer_pos(State);
 get(pos, State) ->
@@ -238,6 +256,10 @@ set(ln, Value, State) ->
     set_ln(Value, State);
 set(col, Value, State) ->
     set_col(Value, State);
+set(loc, Value, State) ->
+    set_loc(Value, State);
+set(snap_loc, Value, State) ->
+    set_snap_loc(Value, State);
 set(buffer_pos, Value, State) ->
     set_buffer_pos(Value, State);
 set(pos, Value, State) ->
@@ -281,6 +303,21 @@ get_col(#state{col = Col}) ->
 set_col(Col, #state{} = State) when ?is_col(Col) ->
     State#state{col = Col}.
 
+get_loc(#state{ln = Ln, col = Col}) ->
+    {Ln, Col}.
+
+set_loc({Ln, Col}, State) when ?is_ln(Ln), ?is_col(Col) ->
+    State#state{
+        ln  = Ln,
+        col = Col
+    }.
+
+get_snap_loc(#state{snap_loc = Col}) ->
+    Col.
+
+set_snap_loc({Ln, Col}, #state{} = State) when ?is_ln(Ln), ?is_col(Col) ->
+    State#state{snap_loc = {Ln, Col}}.
+
 get_buffer_pos(#state{buffer_pos = BufferPos}) ->
     BufferPos.
 
@@ -320,7 +357,7 @@ init([]) ->
     {ok, []}.
 
 handle_char(_Char, Rest, State) ->
-    continue(Rest, incr_col(State)).
+    continue(Rest, snapshot(incr_col(State))).
 
 handle_tokens(_Tokens, State) ->
     State.
@@ -343,6 +380,7 @@ new_test() ->
             tokens     = maps:get(tokens, ?DEFAULTS),
             ln         = maps:get(ln, ?DEFAULTS),
             col        = maps:get(col, ?DEFAULTS),
+            snap_loc   = maps:get(snap_loc, ?DEFAULTS),
             buffer_pos = maps:get(buffer_pos, ?DEFAULTS),
             pos        = maps:get(pos, ?DEFAULTS),
             len        = maps:get(len, ?DEFAULTS)
@@ -358,6 +396,10 @@ string_test() ->
       , ?assertEqual(2, get_ln(State))}
     , { "Should return correct col"
       , ?assertEqual(4, get_col(State))}
+    , { "Should return correct loc"
+      , ?assertEqual({2, 4}, get_loc(State))}
+    , { "Should return correct snap_loc"
+      , ?assertEqual({2, 4}, get_snap_loc(State))}
     , { "Should return correct buffer_pos"
       , ?assertEqual(7, get_buffer_pos(State))}
     , { "Should return correct pos"
