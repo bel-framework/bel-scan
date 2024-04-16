@@ -26,6 +26,7 @@
 -export([ new/1
         , string/2
         , continue/2
+        , skip_new_lns/2
         , terminate/1
         , new_ln/1
         , incr_col/1
@@ -237,18 +238,28 @@ string(Opts, #state{} = State) ->
     {ok, HandlerState} = Handler:init(Opts),
     continue(State#state.input, State#state{handler_state = HandlerState}).
 
-continue(<<$\r, $\n, Rest/bitstring>>, #state{} = State) ->
-    continue(Rest, new_ln(incr_col(State)));
-continue(<<$\r, Rest/bitstring>>, #state{} = State) ->
-    continue(Rest, new_ln(incr_col(State)));
-continue(<<$\n, Rest/bitstring>>, #state{} = State) ->
-    continue(Rest, new_ln(incr_col(State)));
-continue(<<$\f, Rest/bitstring>>, #state{} = State) ->
-    continue(Rest, new_ln(incr_col(State)));
-continue(<<Char, Rest/bitstring>>, #state{handler = Handler} = State) ->
-    Handler:handle_char(Char, Rest, State);
+continue(<<Rest0/bitstring>>, State0) ->
+    case skip_new_lns(Rest0, State0) of
+        {ok, {Char, Rest, #state{handler = Handler} = State}} ->
+            Handler:handle_char(Char, Rest, State);
+        {eof, State} ->
+            terminate(State)
+    end;
 continue(<<>>, #state{} = State) ->
     terminate(State).
+
+skip_new_lns(<<$\r, $\n, Rest/bitstring>>, State) ->
+    skip_new_lns(Rest, new_ln(incr_col(State)));
+skip_new_lns(<<$\r, Rest/bitstring>>, State) ->
+    skip_new_lns(Rest, new_ln(incr_col(State)));
+skip_new_lns(<<$\n, Rest/bitstring>>, State) ->
+    skip_new_lns(Rest, new_ln(incr_col(State)));
+skip_new_lns(<<$\f, Rest/bitstring>>, State) ->
+    skip_new_lns(Rest, new_ln(incr_col(State)));
+skip_new_lns(<<Char, Rest/bitstring>>, State) ->
+    {ok, {Char, Rest, State}};
+skip_new_lns(<<>>, State) ->
+    {eof, State}.
 
 terminate(#state{handler = Handler} = State) ->
     Handler:handle_tokens(State#state.tokens, State).

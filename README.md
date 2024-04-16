@@ -31,6 +31,7 @@ The output of the [module](#module) of the example below is:
                   , incr_col/2
                   , new_ln/1
                   , continue/2
+                  , skip_new_lns/2
                   , update_pos/1
                   , token/2
                   , push_token/2
@@ -87,15 +88,8 @@ scan_param(<<$\s, $}, $}, Rest/bitstring>>, Scan) ->
         fun(S) -> update_pos(S) end,
         fun(S) -> snapshot(S) end
     ]));
-scan_param(<<$\r, $\n, Rest/bitstring>>, Scan) ->
-    scan_param(Rest, new_ln(incr_col(2, Scan)));
-scan_param(<<$\r, Rest/bitstring>>, Scan) ->
-    scan_param(Rest, new_ln(incr_col(Scan)));
-scan_param(<<$\n, Rest/bitstring>>, Scan) ->
-    scan_param(Rest, new_ln(incr_col(Scan)));
-scan_param(<<$\f, Rest/bitstring>>, Scan) ->
-    scan_param(Rest, new_ln(incr_col(Scan)));
-scan_param(<<_, Rest/bitstring>>, Scan) ->
+scan_param(<<Rest0/bitstring>>, Scan0) ->
+    {ok, {_Char, Rest, Scan}} = skip_new_lns(Rest0, Scan0),
     scan_param(Rest, incr_col(Scan)).
 ```
 
