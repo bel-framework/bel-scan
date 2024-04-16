@@ -138,9 +138,9 @@ all() ->
 %%%=====================================================================
 
 readme_example(Config) when is_list(Config) ->
-    [ {text,{1,1},<<"foo ">>}
-    , {param,{1,5},<<"bar">>}
-    , {text,{1,14},<<" baz">>}
+    [ {text, {{1,1}, undefined, undefined},<<"foo ">>}
+    , {param, {{1,5}, undefined, undefined}, <<"bar">>}
+    , {text, {{1,14}, undefined, undefined}, <<" baz">>}
     ] = my_scan:string(<<"foo {{ bar }} baz">>),
     ok.
 
