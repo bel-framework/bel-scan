@@ -306,6 +306,8 @@ anno(Location, Source, Metadata) when ?is_loc(Location), ?is_source(Source) ->
 token(Tag, #state{} = State) ->
     {Tag, anno(State), pos_text(State)}.
 
+token(Tag, Metadata, #state{} = State) ->
+    {Tag, anno(State), Metadata};
 token(Tag, Anno, Metadata) when ?is_anno(Anno) ->
     {Tag, Anno, Metadata}.
 
