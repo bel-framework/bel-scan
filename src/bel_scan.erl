@@ -128,8 +128,9 @@ continue(scan, <<Rest0/binary>>, State) ->
     end;
 continue(find_start_markers, <<Rest0/binary>>, State) ->
     case find_marker(State#state.engines, Rest0) of
-        {match, {Match, Rest}} ->
-            continue({match, Match}, Rest, State);
+        {match, {Match, Loc0, Rest}} ->
+            Loc = bel_scan_loc:incr(Loc0, State#state.loc),
+            continue({match, Match}, Rest, State#state{loc = Loc});
         nomatch ->
             continue(scan, Rest0, State)
     end;
@@ -163,10 +164,11 @@ terminate(State0) ->
 find_marker([{Mod, Eng} | Engs], Bin) ->
     Markers = bel_scan_eng:get_markers(Eng),
     case do_find_marker(Markers, Bin) of
-        {match, {Marker, Groups, Rest}} ->
+        {match, {Marker, MatchText, Groups, Rest}} ->
             MarkerId = bel_scan_mark:get_id(Marker),
             Match = {Mod, MarkerId, Groups},
-            {match, {Match, Rest}};
+            Loc = bel_scan_loc:read(MatchText),
+            {match, {Match, Loc, Rest}};
         nomatch ->
             find_marker(Engs, Bin)
     end;
@@ -175,8 +177,8 @@ find_marker([], _) ->
 
 do_find_marker([Marker | Markers], Bin) ->
     case bel_scan_mark:re_match(Marker, Bin) of
-        {match, {Groups, Rest}} ->
-            {match, {Marker, Groups, Rest}};
+        {match, {MatchText, Groups, Rest}} ->
+            {match, {Marker, MatchText, Groups, Rest}};
         nomatch ->
             do_find_marker(Markers, Bin)
     end;

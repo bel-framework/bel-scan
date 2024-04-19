@@ -24,16 +24,19 @@
 -export([ new/1
         , read/1
         , read/2
-        , get_ln/1
-        , set_ln/2
-        , get_col/1
-        , set_col/2
-        , get_first_col/1
-        , set_first_col/2
+        , incr/2
         , incr_ln/2
         , incr_col/2
         , new_ln/1
         , to_tuple/1
+        , get_ln/1
+        , set_ln/2
+        , get_col/1
+        , set_col/2
+        , get_first_ln/1
+        , set_first_ln/2
+        , get_first_col/1
+        , set_first_col/2
         ]).
 
 -export_type([ t/0 ]).
@@ -45,7 +48,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--record(loc, { ln, col, first_col }).
+-record(loc, { ln, col, first_ln, first_col }).
 
 -opaque t() :: #loc{}.
 
@@ -54,10 +57,12 @@
 %%%=====================================================================
 
 new(Params) when is_map(Params) ->
+    FirstLn = maps:get(first_ln, Params, ?FIRST_LN),
     FirstCol = maps:get(first_col, Params, ?FIRST_COL),
     #loc{
-        ln = maps:get(ln, Params, ?FIRST_LN),
+        ln = maps:get(ln, Params, FirstLn),
         col = maps:get(col, Params, FirstCol),
+        first_ln = FirstLn,
         first_col = FirstCol
     }.
 
@@ -70,12 +75,32 @@ read(Bin, #loc{} = Loc) when is_binary(Bin) ->
 do_read(Bin, Loc) ->
     case bel_scan_read:bin(Bin) of
         {{new_ln, Incr}, Rest} ->
-            do_read(Rest, incr_ln(Incr, Loc));
+            do_read(Rest, incr({Incr, Loc#loc.first_col}, Loc));
         {{continue, Incr}, Rest} ->
             do_read(Rest, incr_col(Incr, Loc));
         terminate ->
             Loc
     end.
+
+% FIXME: I think it's not ok.
+incr(#loc{ln = Ln, col = Col}, Loc) ->
+    incr({Ln, Col}, Loc);
+incr({Ln, Col}, #loc{first_ln = Ln} = Loc) ->
+    incr_col(Col, Loc);
+incr({Ln, Col}, Loc) ->
+    set_col(Col, incr_ln(Ln, Loc)).
+
+incr_ln(N, #loc{ln = Ln} = Loc) ->
+    Loc#loc{ln = Ln+N}.
+
+incr_col(N, #loc{col = Col} = Loc) ->
+    Loc#loc{col = Col+N}.
+
+new_ln(#loc{ln = Ln, first_col = FirstCol} = Loc) ->
+    Loc#loc{ln = Ln+1, col = FirstCol}.
+
+to_tuple(#loc{ln = Ln, col = Col}) ->
+    {Ln, Col}.
 
 get_ln(#loc{ln = Ln}) ->
     Ln.
@@ -89,23 +114,17 @@ get_col(#loc{col = Col}) ->
 set_col(Col, #loc{} = Loc) ->
     Loc#loc{col = Col}.
 
+get_first_ln(#loc{first_ln = FirstLn}) ->
+    FirstLn.
+
+set_first_ln(FirstLn, #loc{} = Loc) ->
+    Loc#loc{first_ln = FirstLn}.
+
 get_first_col(#loc{first_col = FirstCol}) ->
     FirstCol.
 
 set_first_col(FirstCol, #loc{} = Loc) ->
     Loc#loc{first_col = FirstCol}.
-
-incr_ln(N, #loc{ln = Ln} = Loc) ->
-    Loc#loc{ln = Ln+N}.
-
-incr_col(N, #loc{col = Col} = Loc) ->
-    Loc#loc{col = Col+N}.
-
-new_ln(#loc{ln = Ln, first_col = FirstCol} = Loc) ->
-    Loc#loc{ln = Ln+1, col = FirstCol}.
-
-to_tuple(#loc{ln = Ln, col = Col}) ->
-    {Ln, Col}.
 
 %%%=====================================================================
 %%% Tests

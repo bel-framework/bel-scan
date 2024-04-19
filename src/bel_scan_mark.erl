@@ -39,7 +39,7 @@ re_match(#marker{re = RE}, Bin) ->
     case re:run(Bin, RE, [{capture, all, binary}]) of
         {match, [MatchText | Groups]} ->
             <<_:(byte_size(MatchText))/binary, Rest/binary>> = Bin,
-            {match, {Groups, Rest}};
+            {match, {MatchText, Groups, Rest}};
         nomatch ->
             nomatch
     end.
