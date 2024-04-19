@@ -83,11 +83,11 @@ anno(Metadata, _State) ->
     {start_loc, end_loc, Metadata}.
 
 % TODO
-clear_text(State) ->
-    State.
+clear_text(#state{bpart = BPart} = State) ->
+    State#state{bpart = bel_scan_bpart:set_len(0, BPart)}.
 
 push_token(Token, #state{tokens = Tokens} = State) ->
-    State#state{tokens = [Token | Tokens]}.
+    State#state{tokens = Tokens ++ [Token]}.
 
 push_tokens(Tokens, State) when is_list(Tokens) ->
     lists:foldl(fun push_token/2, State, Tokens).
@@ -137,19 +137,28 @@ continue({match, Match}, Rest, State0) ->
     State1 = case get_part(State0#state.bpart) of
         <<>> ->
             State0;
-        Text ->
-            handle_text(State0#state.engines, Text, State0)
+        Text0 ->
+            {Text, State2} = handle_text(State0#state.engines, Text0, State0),
+            fold(State2, [
+                fun(S) -> push_token(text_token(Text, S), S) end,
+                fun(S) -> clear_text(S) end
+            ])
     end,
     State = handle_match(State0#state.engines, Match, State1),
     continue(scan, Rest, State).
 
-terminate(State) ->
-    case get_part(State#state.bpart) of
+terminate(State0) ->
+    State = case get_part(State0#state.bpart) of
         <<>> ->
-            State;
-        Text ->
-            handle_text(State#state.engines, Text, State)
-    end.
+            State0;
+        Text0 ->
+            {Text, State1} = handle_text(State0#state.engines, Text0, State0),
+            fold(State1, [
+                fun(S) -> push_token(text_token(Text, S), S) end,
+                fun(S) -> clear_text(S) end
+            ])
+    end,
+    handle_terminate(State#state.engines, State#state.tokens, State).
 
 find_marker([{Mod, Eng} | Engs], Bin) ->
     Markers = bel_scan_eng:get_markers(Eng),
@@ -196,7 +205,7 @@ handle_text([{Mod, _Eng} | Engs], Text0, State0) ->
             State
     end;
 handle_text([], Text, State) ->
-    push_token(text_token(Text, State), State).
+    {Text, State}.
 
 handle_match([{Mod, _Eng} | Engs], Match, State0) ->
     case Mod:handle_match(Match, State0) of
@@ -209,6 +218,18 @@ handle_match([{Mod, _Eng} | Engs], Match, State0) ->
     end;
 handle_match([], _Match, State) ->
     State.
+
+handle_terminate([{Mod, _Eng} | Engs], Tokens0, State0) ->
+    case Mod:handle_terminate(Tokens0, State0) of
+        {noreply, State} ->
+            handle_terminate(Engs, Tokens0, State);
+        {reply, Tokens, State} ->
+            handle_terminate(Engs, Tokens, State);
+        {halt, State} ->
+            State
+    end;
+handle_terminate([], Tokens, State) ->
+    {Tokens, State}.
 
 %%%=====================================================================
 %%% Tests

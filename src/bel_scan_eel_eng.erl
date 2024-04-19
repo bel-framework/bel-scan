@@ -6,7 +6,7 @@
         , handle_start/2
         , handle_text/2
         , handle_match/2
-        , handle_terminate/1
+        , handle_terminate/2
         ]).
 
 -include("bel_scan_eng.hrl").
@@ -65,5 +65,5 @@ handle_match({?MODULE, MarkerId, Captured}, State) ->
 handle_match(_Match, State) ->
     {noreply, State}.
 
-handle_terminate(State) ->
+handle_terminate(_Tokens, State) ->
     {noreply, State}.

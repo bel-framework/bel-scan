@@ -44,10 +44,11 @@
                     | {halt, scan()}
                     .
 
--callback handle_terminate(Scan0) -> Scan
-    when Scan0 :: scan()
-       , Scan  :: scan()
-                .
+-callback handle_terminate(Tokens, Scan0) -> Scan
+    when Tokens :: [token()]
+       , Scan0  :: scan()
+       , Scan   :: scan()
+                 .
 
 % Libs
 
