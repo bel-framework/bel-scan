@@ -22,6 +22,7 @@
 -module(bel_scan_bpart).
 
 -export([ new/1
+        , reset_pos/2
         , get_bin/1
         , set_bin/2
         , get_pos/1
@@ -56,6 +57,21 @@ new(Params) when is_map(Params) ->
         len = maps:get(len, Params, ?INIT_LEN)
     }.
 
+reset_pos(Pos, #bpart{} = BPart) ->
+    BPart#bpart{
+        pos = Pos,
+        len = ?INIT_LEN
+    }.
+
+incr_pos(N, #bpart{pos = Pos} = BPart) ->
+    BPart#bpart{pos = Pos+N}.
+
+incr_len(N, #bpart{len = Len} = BPart) ->
+    BPart#bpart{len = Len+N}.
+
+get_part(#bpart{bin = Bin} = BPart) ->
+    binary:part(Bin, BPart#bpart.pos, BPart#bpart.len).
+
 get_bin(#bpart{bin = X}) ->
     X.
 
@@ -73,15 +89,6 @@ get_len(#bpart{len = X}) ->
 
 set_len(X, #bpart{} = BPart) ->
     BPart#bpart{len = X}.
-
-incr_pos(N, #bpart{pos = Pos} = BPart) ->
-    BPart#bpart{pos = Pos+N}.
-
-incr_len(N, #bpart{len = Len} = BPart) ->
-    BPart#bpart{len = Len+N}.
-
-get_part(#bpart{bin = Bin} = BPart) ->
-    binary:part(Bin, BPart#bpart.pos, BPart#bpart.len).
 
 %%%=====================================================================
 %%% Tests

@@ -34,10 +34,12 @@
                  .
 
 -callback handle_match(Match, Scan) -> Return
-    when Match     :: {MarkerMod, {MarkerId, Captured}}
+    when Match     :: {MarkerMod, MarkerId, Text, Captured, EndLoc}
        , MarkerMod :: module()
        , MarkerId  :: marker_id()
+       , Text      :: binary()
        , Captured  :: captured()
+       , EndLoc    :: loc()
        , Scan      :: scan()
        , Return    :: {noreply, scan()}
                     | {reply, [token()], scan()}
@@ -57,6 +59,7 @@
 -type scan()      :: bel_scan:t().
 -type marker_id() :: bel_scan_marker:id().
 -type token()     :: bel_scan_token:t().
+-type loc()       :: bel_scan_loc:t().
 -type opts()      :: term().
 -type state()     :: term().
 -type re_group()  :: binary().

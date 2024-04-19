@@ -11,6 +11,10 @@
 
 -include("bel_scan_eng.hrl").
 
+%%%=====================================================================
+%%% bel_scan_eng callbacks
+%%%=====================================================================
+
 init(_Opts) ->
     #engine{
         markers = [
@@ -58,12 +62,18 @@ handle_start(_Bin, State) ->
 handle_text(_Text, State) ->
     {noreply, State}.
 
-handle_match({?MODULE, MarkerId, Captured}, State) ->
+handle_match({?MODULE, MarkerId, _Text, Captured, EndLoc}, State0) ->
     [_StartMarker, Expr, _EndMarker] = Captured,
-    Token = bel_scan:token(MarkerId, Expr, State),
+    {Token, State} = bel_scan:token(MarkerId, Expr, EndLoc, undefined, State0),
     {reply, [Token], State};
 handle_match(_Match, State) ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->
     {noreply, State}.
+
+%%%=====================================================================
+%%% Internal functions
+%%%=====================================================================
+
+% nothing here yet!

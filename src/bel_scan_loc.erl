@@ -25,10 +25,13 @@
         , read/1
         , read/2
         , incr/2
+        , incr_pos/2
         , incr_ln/2
         , incr_col/2
         , new_ln/1
         , to_tuple/1
+        , get_pos/1
+        , set_pos/2
         , get_ln/1
         , set_ln/2
         , get_col/1
@@ -48,7 +51,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--record(loc, { ln, col, first_ln, first_col }).
+-record(loc, { pos, ln, col, first_ln, first_col }).
 
 -opaque t() :: #loc{}.
 
@@ -60,6 +63,7 @@ new(Params) when is_map(Params) ->
     FirstLn = maps:get(first_ln, Params, ?FIRST_LN),
     FirstCol = maps:get(first_col, Params, ?FIRST_COL),
     #loc{
+        pos = maps:get(len, Params, 0),
         ln = maps:get(ln, Params, FirstLn),
         col = maps:get(col, Params, FirstCol),
         first_ln = FirstLn,
@@ -75,32 +79,50 @@ read(Bin, #loc{} = Loc) when is_binary(Bin) ->
 do_read(Bin, Loc) ->
     case bel_scan_read:bin(Bin) of
         {{new_ln, Incr}, Rest} ->
-            do_read(Rest, incr({Incr, Loc#loc.first_col}, Loc));
+            do_read(Rest, new_ln(incr_col(Incr, Loc)));
         {{continue, Incr}, Rest} ->
             do_read(Rest, incr_col(Incr, Loc));
         terminate ->
             Loc
     end.
 
-% FIXME: I think it's not ok.
 incr(#loc{ln = Ln, col = Col}, Loc) ->
-    incr({Ln, Col}, Loc);
+    set_pos(Loc#loc.pos, incr({Ln, Col}, Loc));
 incr({Ln, Col}, #loc{first_ln = Ln} = Loc) ->
-    incr_col(Col, Loc);
-incr({Ln, Col}, Loc) ->
-    set_col(Col, incr_ln(Ln, Loc)).
+    incr_pos(Col - Loc#loc.first_col,
+        set_col(Col + Loc#loc.col, Loc));
+incr({Ln, Col}, #loc{} = Loc) ->
+    set_col(Col, set_ln(Ln, Loc)).
 
-incr_ln(N, #loc{ln = Ln} = Loc) ->
-    Loc#loc{ln = Ln+N}.
+incr_pos(N, #loc{pos = Pos} = Loc) ->
+    Loc#loc{pos = Pos+N}.
 
-incr_col(N, #loc{col = Col} = Loc) ->
-    Loc#loc{col = Col+N}.
+incr_ln(N, #loc{ln = Ln, pos = Pos} = Loc) ->
+    Loc#loc{
+        ln = Ln+N,
+        pos = Pos+N
+    }.
 
-new_ln(#loc{ln = Ln, first_col = FirstCol} = Loc) ->
-    Loc#loc{ln = Ln+1, col = FirstCol}.
+incr_col(N, #loc{col = Col, pos = Pos} = Loc) ->
+    Loc#loc{
+        col = Col+N,
+        pos = Pos+N
+    }.
+
+new_ln(#loc{ln = Ln, first_col = FirstCol, pos = Pos} = Loc) ->
+    Loc#loc{
+        ln = Ln+1,
+        col = FirstCol
+    }.
 
 to_tuple(#loc{ln = Ln, col = Col}) ->
     {Ln, Col}.
+
+get_pos(#loc{pos = Pos}) ->
+    Pos.
+
+set_pos(Pos, #loc{} = Loc) ->
+    Loc#loc{pos = Pos}.
 
 get_ln(#loc{ln = Ln}) ->
     Ln.
