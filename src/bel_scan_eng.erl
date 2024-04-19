@@ -17,10 +17,13 @@
        , EngState :: state()
                    .
 
--callback handle_start(Scan0) -> Scan
-    when Scan0 :: scan()
-       , Scan  :: scan()
-                .
+-callback handle_start(Bin, Scan) -> Return
+    when Bin    :: binary()
+       , Scan   :: scan()
+       , Return :: {noreply, scan()}
+                 | {reply, binary(), scan()}
+                 | {halt, scan()}
+                 .
 
 -callback handle_text(Text, Scan) -> Return
     when Text   :: binary()

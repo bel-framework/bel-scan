@@ -57,17 +57,17 @@ new(Params) when is_map(Params) ->
     #state{
         engines = init_engines(maps:get(engines, Params, [bel_scan_eel_eng])),
         bpart = maps:get(bpart, Params, bel_scan_bpart:new(#{
-            bin => maps:get(bin, Params)
+            bin => maps:get(bin, Params, <<>>)
         })),
         loc = maps:get(loc, Params, bel_scan_loc:new(#{})),
         tokens = maps:get(tokens, Params, [])
     }.
 
 bin(Bin) ->
-    state(new(#{bin => Bin})).
+    start(Bin, new(#{})).
 
 state(#state{bpart = BPart} = State) ->
-    continue(scan, bel_scan_bpart:get_bin(BPart), State).
+    start(bel_scan_bpart:get_bin(BPart), State).
 
 fold(#state{} = State, Funs) ->
     lists:foldl(fun(F, S) -> F(S) end, State, Funs).
@@ -103,6 +103,11 @@ init_engine(Mod) when is_atom(Mod) ->
     init_engine({Mod, ?DEFAULT_OPTS});
 init_engine({Mod, Opts}) when is_atom(Mod) ->
     {Mod, bel_scan_eng:compile(Mod:init(Opts))}.
+
+start(Bin0, State0) ->
+    {Bin, State} = handle_start(State0#state.engines, Bin0, State0),
+    BPart = bel_scan_bpart:set_bin(Bin, State#state.bpart),
+    continue(scan, Bin, State#state{bpart = BPart}).
 
 continue(scan, <<>>, State) ->
     terminate(State);
@@ -168,6 +173,18 @@ do_find_marker([Marker | Markers], Bin) ->
     end;
 do_find_marker([], _) ->
     nomatch.
+
+handle_start([{Mod, _Eng} | Engs], Bin0, State0) ->
+    case Mod:handle_start(Bin0, State0) of
+        {noreply, State} ->
+            handle_start(Engs, Bin0, State);
+        {reply, Bin, State} ->
+            handle_start(Engs, Bin, State);
+        {halt, State} ->
+            State
+    end;
+handle_start([], Bin, State) ->
+    {Bin, State}.
 
 handle_text([{Mod, _Eng} | Engs], Text0, State0) ->
     case Mod:handle_text(Text0, State0) of

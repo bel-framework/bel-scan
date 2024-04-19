@@ -3,7 +3,7 @@
 
 % bel_scan_eng callbacks
 -export([ init/1
-        , handle_start/1
+        , handle_start/2
         , handle_text/2
         , handle_match/2
         , handle_terminate/1
@@ -52,7 +52,7 @@ init(_Opts) ->
         ]
     }.
 
-handle_start(State) ->
+handle_start(_Bin, State) ->
     {noreply, State}.
 
 handle_text(_Text, State) ->
