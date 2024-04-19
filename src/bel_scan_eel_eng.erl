@@ -16,28 +16,38 @@ init(_Opts) ->
         markers = [
             #marker{
                 id = inline,
-                re_start = <<"<%=\\s+">>,
-                re_end = <<"\\s+.%>">>
+                re = <<
+                    "(<%=\\s+)(.*)?(\\s+\\.%>)" "|"
+                    "(<%=\\s+)(.*)?(^(\\s*\\.%>))"
+                >>
             },
             #marker{
                 id = start,
-                re_start = <<"<%=\\s+">>,
-                re_end = <<"\\s+%>">>
-            },
+                re = <<
+                    "(<%=\\s+)(.*)?(\\s+%>)" "|"
+                    "(<%=\\s+)(.*)?(^(\\s*%>))"
+                >>
+            }
             #marker{
                 id = continue,
-                re_start = <<"<%\\s+">>,
-                re_end = <<"\\s+%>">>
+                re = <<
+                    "(<%\\s+)(.*)?(\\s+%>)" "|"
+                    "(<%\\s+)(.*)?(^(\\s*%>))"
+                >>
             },
             #marker{
                 id = terminate,
-                re_start = <<"<%\\s+">>,
-                re_end = <<"\\s+.%>">>
+                re = <<
+                    "(<%\\s+)(.*)?(\\s+\\.%>)" "|"
+                    "(<%\\s+)(.*)?(^(\\s*\\.%>))"
+                >>
             },
             #marker{
                 id = comment,
-                re_start = <<"<%!--\\s+">>,
-                re_end = <<"\\s+--%>">>
+                re = <<
+                    "(<%!--\\s+)(.*)?(\\s+--%>)" "|"
+                    "(<%!--\\s+)(.*)?(^(\\s*--%>))"
+                >>
             }
         ]
     }.
@@ -48,17 +58,9 @@ handle_start(State) ->
 handle_text(_Text, State) ->
     {noreply, State}.
 
-handle_match({?MODULE, {inline, Text, _Captured}}, State) ->
-    Token = bel_scan:token(inline, Text, State),
-    {reply, [Token], State};
-handle_match({?MODULE, {start, _Text, _Captured}}, State) ->
-    {noreply, State};
-handle_match({?MODULE, {continue, _Text, _Captured}}, State) ->
-    {noreply, State};
-handle_match({?MODULE, {terminate, _Text, _Captured}}, State) ->
-    {noreply, State};
-handle_match({?MODULE, {comment, Text, _Captured}}, State) ->
-    Token = bel_scan:token(comment, Text, State),
+handle_match({?MODULE, MarkerId, Captured}, State) ->
+    [_StartMarker, Expr, _EndMarker] = Captured,
+    Token = bel_scan:token(MarkerId, Expr, State),
     {reply, [Token], State};
 handle_match(_Match, State) ->
     {noreply, State}.

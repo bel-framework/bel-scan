@@ -22,6 +22,8 @@
 -module(bel_scan_loc).
 
 -export([ new/1
+        , read/1
+        , read/2
         , get_ln/1
         , set_ln/2
         , get_col/1
@@ -44,6 +46,7 @@
 -endif.
 
 -record(loc, { ln, col, first_col }).
+
 -opaque t() :: #loc{}.
 
 %%%=====================================================================
@@ -57,6 +60,22 @@ new(Params) when is_map(Params) ->
         col = maps:get(col, Params, FirstCol),
         first_col = FirstCol
     }.
+
+read(Bin) ->
+    read(Bin, new(#{})).
+
+read(Bin, #loc{} = Loc) when is_binary(Bin) ->
+    do_read(Bin, Loc).
+
+do_read(Bin, Loc) ->
+    case bel_scan_read:bin(Bin) of
+        {{new_ln, Incr}, Rest} ->
+            do_read(Rest, incr_ln(Incr, Loc));
+        {{continue, Incr}, Rest} ->
+            do_read(Rest, incr_col(Incr, Loc));
+        terminate ->
+            Loc
+    end.
 
 get_ln(#loc{ln = Ln}) ->
     Ln.

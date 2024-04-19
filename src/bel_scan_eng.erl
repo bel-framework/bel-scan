@@ -31,14 +31,13 @@
                  .
 
 -callback handle_match(Match, Scan) -> Return
-    when Match     :: {MarkerMod, {MarkerId, Text, Captured}}
+    when Match     :: {MarkerMod, {MarkerId, Captured}}
        , MarkerMod :: module()
        , MarkerId  :: marker_id()
-       , Text      :: binary()
        , Captured  :: captured()
        , Scan      :: scan()
        , Return    :: {noreply, scan()}
-                    | {reply, binary(), scan()}
+                    | {reply, [token()], scan()}
                     | {halt, scan()}
                     .
 
@@ -53,10 +52,11 @@
 
 -type scan()      :: bel_scan:t().
 -type marker_id() :: bel_scan_marker:id().
+-type token()     :: bel_scan_token:t().
 -type opts()      :: term().
 -type state()     :: term().
 -type re_group()  :: binary().
--type captured()  :: { Start :: [re_group()], End :: [re_group()] }.
+-type captured()  :: [re_group()].
 
 compile(#engine{markers = Markers} = Eng) ->
     Eng#engine{markers = [bel_scan_mark:compile(M) || M <- Markers]}.

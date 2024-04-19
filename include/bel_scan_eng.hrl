@@ -2,9 +2,8 @@
 %% matching in modules that behaves as bel_scan_eng.
 
 -record(marker, {
-    id       :: bel_scan_mark:id(),
-    re_start :: bel_scan_mark:re_start(),
-    re_end   :: bel_scan_mark:re_end()
+    id :: bel_scan_mark:id(),
+    re :: bel_scan_mark:re()
 }).
 
 -record(engine, {
