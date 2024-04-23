@@ -10,11 +10,22 @@
         , set_state/2
         ]).
 
+-export_type([ t/0
+             , scan/0
+             , marker_id/0
+             , token/0
+             , loc/0
+             , opts/0
+             , state/0
+             , re_group/0
+             , captured/0
+             ]).
+
 % Callbacks
 
--callback init(Opts) -> EngState
+-callback init(Opts) -> Engine
     when Opts     :: opts()
-       , EngState :: state()
+       , Engine   :: t()
                    .
 
 -callback handle_start(Bin, Scan) -> Return
@@ -34,11 +45,13 @@
                  .
 
 -callback handle_match(Match, Scan) -> Return
-    when Match     :: {MarkerMod, MarkerId, Text, Captured, EndLoc}
+    when Match     :: {MarkerMod, MarkerId, Text, Captured, Loc}
        , MarkerMod :: module()
        , MarkerId  :: marker_id()
        , Text      :: binary()
        , Captured  :: captured()
+       , Loc       :: {InitLoc, EndLoc}
+       , InitLoc   :: loc()
        , EndLoc    :: loc()
        , Scan      :: scan()
        , Return    :: {noreply, scan()}
@@ -46,18 +59,21 @@
                     | {halt, scan()}
                     .
 
--callback handle_terminate(Tokens, Scan0) -> Scan
+-callback handle_terminate(Tokens, Scan0) -> Return
     when Tokens :: [token()]
        , Scan0  :: scan()
-       , Scan   :: scan()
+       , Return :: {noreply, scan()}
+                 | {reply, [token()], scan()}
+                 | {halt, scan()}
                  .
 
 % Libs
 
 -include("bel_scan_eng.hrl").
 
+-opaque t()       :: #engine{}.
 -type scan()      :: bel_scan:t().
--type marker_id() :: bel_scan_marker:id().
+-type marker_id() :: bel_scan_mark:id().
 -type token()     :: bel_scan_token:t().
 -type loc()       :: bel_scan_loc:t().
 -type opts()      :: term().

@@ -43,7 +43,10 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--record(bpart, { bin, pos, len }).
+-record(bpart, { bin :: binary()
+               , pos :: non_neg_integer()
+               , len :: non_neg_integer()
+               }).
 -opaque t() :: #bpart{}.
 
 %%%=====================================================================
@@ -72,23 +75,23 @@ incr_len(N, #bpart{len = Len} = BPart) ->
 get_part(#bpart{bin = Bin} = BPart) ->
     binary:part(Bin, BPart#bpart.pos, BPart#bpart.len).
 
-get_bin(#bpart{bin = X}) ->
-    X.
+get_bin(#bpart{bin = Bin}) ->
+    Bin.
 
-set_bin(X, #bpart{} = BPart) ->
-    BPart#bpart{bin = X}.
+set_bin(Bin, #bpart{} = BPart) ->
+    BPart#bpart{bin = Bin}.
 
-get_pos(#bpart{pos = X}) ->
-    X.
+get_pos(#bpart{pos = Pos}) ->
+    Pos.
 
-set_pos(X, #bpart{} = BPart) ->
-    BPart#bpart{pos = X}.
+set_pos(Pos, #bpart{} = BPart) ->
+    BPart#bpart{pos = Pos}.
 
-get_len(#bpart{len = X}) ->
-    X.
+get_len(#bpart{len = Len}) ->
+    Len.
 
-set_len(X, #bpart{} = BPart) ->
-    BPart#bpart{len = X}.
+set_len(Len, #bpart{} = BPart) ->
+    BPart#bpart{len = Len}.
 
 %%%=====================================================================
 %%% Tests

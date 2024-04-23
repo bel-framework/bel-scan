@@ -133,17 +133,29 @@ all() ->
 %%% Test cases
 %%%=====================================================================
 
-% foo {{ {{A, b}, {0, "C"}} }} bar
 bin(Config) when is_list(Config) ->
-    Expect = error,
-    Bin = <<
+    Opts = #{
+        engines => [support_scan_eng]
+    },
+
+    SingleLnBin = <<"foo {{ {{A, b}, {0, \"C\"}} }} bar">>,
+    [
+        {text,{{1,1},{1,5},undefined},<<"foo ">>},
+        {expr,{{1,5},{1,30},undefined},<<"{{A, b}, {0, \"C\"}}">>},
+        {text,{{1,30},{1,34},undefined},<<" bar">>}
+    ] = bel_scan:get_tokens(bel_scan:bin(SingleLnBin, Opts)),
+
+    MultiLnBin = <<
 "foo {{ {{A, b},
  {0, \"C\"}} }}
  bar"
     >>,
-    Expect = bel_scan:bin(Bin, #{
-        engines => [support_scan_eng]
-    }),
+    [
+        {text,{{1,1},{1,5},undefined},<<"foo ">>},
+        {expr,{{1,5},{2,14},undefined},<<"{{A, b},\n {0, \"C\"}}">>},
+        {text,{{2,14},{3,5},undefined},<<"\n bar">>}
+    ] = bel_scan:get_tokens(bel_scan:bin(MultiLnBin, Opts)),
+
     ok.
 
 %%%=====================================================================

@@ -44,6 +44,7 @@
 
 -export_type([ t/0 ]).
 
+-define(FIRST_POS, 0).
 -define(FIRST_LN, 1).
 -define(FIRST_COL, 1).
 
@@ -63,7 +64,7 @@ new(Params) when is_map(Params) ->
     FirstLn = maps:get(first_ln, Params, ?FIRST_LN),
     FirstCol = maps:get(first_col, Params, ?FIRST_COL),
     #loc{
-        pos = maps:get(len, Params, 0),
+        pos = maps:get(pos, Params, ?FIRST_POS),
         ln = maps:get(ln, Params, FirstLn),
         col = maps:get(col, Params, FirstCol),
         first_ln = FirstLn,
@@ -109,7 +110,7 @@ incr_col(N, #loc{col = Col, pos = Pos} = Loc) ->
         pos = Pos+N
     }.
 
-new_ln(#loc{ln = Ln, first_col = FirstCol, pos = Pos} = Loc) ->
+new_ln(#loc{ln = Ln, first_col = FirstCol} = Loc) ->
     Loc#loc{
         ln = Ln+1,
         col = FirstCol
@@ -158,19 +159,25 @@ set_first_col(FirstCol, #loc{} = Loc) ->
 new_test() ->
     [ { "Should have default values"
       , ?assertEqual(#loc{
+            pos = ?FIRST_POS,
             ln = ?FIRST_LN,
             col = ?FIRST_COL,
+            first_ln = ?FIRST_LN,
             first_col = ?FIRST_COL
         }, new(#{}))
       }
     , { "Should have params values"
       , ?assertEqual(#loc{
+            pos = 6,
             ln = 6,
             col = 6,
+            first_ln = 6,
             first_col = 6
         }, new(#{
+            pos => 6,
             ln => 6,
             col => 6,
+            first_ln => 6,
             first_col => 6
         }))
       }

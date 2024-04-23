@@ -18,9 +18,10 @@
     value :: term()
 }).
 
--opaque t()   :: #token{}.
+% -opaque t()   :: #token{}.
+-type t()     :: {id(), anno(), value()}.
 -type id()    :: term().
--type anno()  :: bel_scan:t().
+-type anno()  :: bel_scan_anno:t().
 -type value() :: term().
 
 new(Params) when is_map(Params) ->

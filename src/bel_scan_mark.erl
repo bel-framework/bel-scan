@@ -20,7 +20,7 @@
 
 -opaque t() :: #marker{}.
 -type id()  :: term().
--type re()  :: binary() | re:mp().
+-type re()  :: binary() | {re_pattern, _, _, _, _}. % re:mp/0 isn't exported.
 
 compile(#marker{} = Marker) ->
     case compile_re(Marker#marker.re) of

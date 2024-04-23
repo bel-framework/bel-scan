@@ -22,6 +22,7 @@
 -module(bel_scan).
 -compile(inline_list_funcs).
 
+% API
 -export([ new/1
         , bin/2
         , state/1
@@ -35,7 +36,25 @@
         , push_tokens/2
         ]).
 
--export_type([ t/0, input/0 ]).
+% State getters and setters functions
+-export([ get_engines/1
+        , set_engines/2
+        , get_bpart/1
+        , set_bpart/2
+        , get_loc/1
+        , set_loc/2
+        , get_prev_loc/1
+        , set_prev_loc/2
+        , get_tokens/1
+        , set_tokens/2
+        ]).
+
+-export_type([ t/0
+             , engine/0
+             , bpart/0
+             , loc/0
+             , token/0
+             ]).
 
 -import(bel_scan_loc,   [ new_ln/1, incr_col/2 ]).
 -import(bel_scan_bpart, [ incr_len/2, get_part/1 ]).
@@ -47,10 +66,18 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--record(state, { engines, bpart, loc, prev_loc, tokens }).
+-record(state, { engines  :: [engine()]
+               , bpart    :: bpart()
+               , loc      :: loc()
+               , prev_loc :: loc()
+               , tokens   :: [token()]
+               }).
 
--opaque t()   :: #state{}.
--type input() :: binary().
+-opaque t()    :: #state{}.
+-type engine() :: bel_scan_eng:t().
+-type bpart()  :: bel_scan_bpart:t().
+-type loc()    :: bel_scan_loc:t().
+-type token()  :: bel_scan_token:t().
 
 %%%=====================================================================
 %%% API
@@ -68,7 +95,7 @@ new(Params) when is_map(Params) ->
         tokens = maps:get(tokens, Params, [])
     }.
 
-bin(Bin, Opts) ->
+bin(Bin, Opts) when is_binary(Bin) ->
     start(Bin, new(Opts)).
 
 state(#state{bpart = BPart} = State) ->
@@ -105,6 +132,40 @@ push_token(Token, #state{tokens = Tokens} = State) ->
 
 push_tokens(Tokens, State) when is_list(Tokens) ->
     lists:foldl(fun push_token/2, State, Tokens).
+
+%%%=====================================================================
+%%% State getters and setters functions
+%%%=====================================================================
+
+get_engines(#state{engines = Engines}) ->
+    Engines.
+
+set_engines(Engines, #state{} = State) ->
+    State#state{engines = Engines}.
+
+get_bpart(#state{bpart = BPart}) ->
+    BPart.
+
+set_bpart(BPart, #state{} = State) ->
+    State#state{bpart = BPart}.
+
+get_loc(#state{loc = Loc}) ->
+    Loc.
+
+set_loc(Loc, #state{} = State) ->
+    State#state{loc = Loc}.
+
+get_prev_loc(#state{prev_loc = PrevLoc}) ->
+    PrevLoc.
+
+set_prev_loc(PrevLoc, #state{} = State) ->
+    State#state{prev_loc = PrevLoc}.
+
+get_tokens(#state{tokens = Tokens}) ->
+    Tokens.
+
+set_tokens(Tokens, #state{} = State) ->
+    State#state{tokens = Tokens}.
 
 %%%=====================================================================
 %%% Internal functions

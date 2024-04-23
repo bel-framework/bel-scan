@@ -1,4 +1,4 @@
--module(bel_scan_eel_eng).
+-module(bel_scan_eng_eel).
 -behaviour(bel_scan_eng).
 
 % bel_scan_eng callbacks
@@ -31,7 +31,7 @@ init(_Opts) ->
                     "(<%=\\s+)(.*)?(\\s+%>)" "|"
                     "(<%=\\s+)(.*)?(^(\\s*%>))"
                 >>
-            }
+            },
             #marker{
                 id = continue,
                 re = <<
@@ -62,9 +62,9 @@ handle_start(_Bin, State) ->
 handle_text(_Text, State) ->
     {noreply, State}.
 
-handle_match({?MODULE, MarkerId, _Text, Captured, EndLoc}, State0) ->
-    [_StartMarker, Expr, _EndMarker] = Captured,
-    {Token, State} = bel_scan:token(MarkerId, Expr, EndLoc, undefined, State0),
+handle_match({?MODULE, MarkerId, _Text, Captured, Loc}, State) ->
+    [_SMarker, Expr, _EMarker] = Captured,
+    Token = bel_scan:token(MarkerId, Expr, Loc),
     {reply, [Token], State};
 handle_match(_Match, State) ->
     {noreply, State}.
