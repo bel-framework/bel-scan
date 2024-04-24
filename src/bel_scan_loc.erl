@@ -88,12 +88,14 @@ do_read(Bin, Loc) ->
     end.
 
 incr(#loc{ln = Ln, col = Col}, Loc) ->
-    set_pos(Loc#loc.pos, incr({Ln, Col}, Loc));
+    incr({Ln, Col}, Loc);
 incr({Ln, Col}, #loc{first_ln = Ln} = Loc) ->
     incr_pos(Col - Loc#loc.first_col,
-        set_col(Col + Loc#loc.col, Loc));
+        set_col(Col - Loc#loc.first_col + Loc#loc.col, Loc));
 incr({Ln, Col}, #loc{} = Loc) ->
-    set_col(Col, set_ln(Ln, Loc)).
+    set_pos(Loc#loc.pos,
+        set_col(Col,
+            set_ln(Ln, Loc))).
 
 incr_pos(N, #loc{pos = Pos} = Loc) ->
     Loc#loc{pos = Pos+N}.
@@ -110,10 +112,11 @@ incr_col(N, #loc{col = Col, pos = Pos} = Loc) ->
         pos = Pos+N
     }.
 
-new_ln(#loc{ln = Ln, first_col = FirstCol} = Loc) ->
+new_ln(#loc{ln = Ln, first_col = FirstCol, pos = Pos} = Loc) ->
     Loc#loc{
         ln = Ln+1,
-        col = FirstCol
+        col = FirstCol,
+        pos = Pos+1
     }.
 
 to_tuple(#loc{ln = Ln, col = Col}) ->

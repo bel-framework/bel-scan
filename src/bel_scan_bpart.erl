@@ -23,15 +23,17 @@
 
 -export([ new/1
         , reset_pos/2
+        , incr_pos/2
+        , incr_len/2
+        , get_part/1
         , get_bin/1
         , set_bin/2
         , get_pos/1
         , set_pos/2
         , get_len/1
         , set_len/2
-        , incr_pos/2
-        , incr_len/2
-        , get_part/1
+        , get_init_len/1
+        , set_init_len/2
         ]).
 
 -export_type([ t/0 ]).
@@ -43,9 +45,10 @@
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--record(bpart, { bin :: binary()
-               , pos :: non_neg_integer()
-               , len :: non_neg_integer()
+-record(bpart, { bin      :: binary()
+               , pos      :: non_neg_integer()
+               , len      :: non_neg_integer()
+               , init_len :: non_neg_integer()
                }).
 -opaque t() :: #bpart{}.
 
@@ -54,16 +57,18 @@
 %%%=====================================================================
 
 new(Params) when is_map(Params) ->
+    InitLen = maps:get(init_len, Params, ?INIT_LEN),
     #bpart{
         bin = maps:get(bin, Params),
         pos = maps:get(pos, Params, ?FIRST_POS),
-        len = maps:get(len, Params, ?INIT_LEN)
+        len = maps:get(len, Params, InitLen),
+        init_len = InitLen
     }.
 
-reset_pos(Pos, #bpart{} = BPart) ->
+reset_pos(Pos, #bpart{init_len = InitLen} = BPart) ->
     BPart#bpart{
         pos = Pos,
-        len = ?INIT_LEN
+        len = InitLen
     }.
 
 incr_pos(N, #bpart{pos = Pos} = BPart) ->
@@ -93,6 +98,12 @@ get_len(#bpart{len = Len}) ->
 set_len(Len, #bpart{} = BPart) ->
     BPart#bpart{len = Len}.
 
+get_init_len(#bpart{init_len = InitLen}) ->
+    InitLen.
+
+set_init_len(InitLen, #bpart{} = BPart) ->
+    BPart#bpart{init_len = InitLen}.
+
 %%%=====================================================================
 %%% Tests
 %%%=====================================================================
@@ -105,18 +116,21 @@ new_test() ->
       , ?assertEqual(#bpart{
             bin = <<>>,
             pos = ?FIRST_POS,
-            len = ?INIT_LEN
+            len = ?INIT_LEN,
+            init_len = ?INIT_LEN
         }, new(#{bin => <<>>}))
       }
     , { "Should have params values"
       , ?assertEqual(#bpart{
             bin = <<>>,
             pos = 6,
-            len = 6
+            len = 6,
+            init_len = 6
         }, new(#{
             bin => <<>>,
             pos => 6,
-            len => 6
+            len => 6,
+            init_len => 6
         }))
       }
     ].

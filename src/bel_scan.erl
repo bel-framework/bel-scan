@@ -26,12 +26,11 @@
 -export([ new/1
         , bin/2
         , state/1
+        , state/2
         , fold/2
         , text_token/2
-        , text_token/3
         , token/3
         , token/4
-        , token/5
         , push_token/2
         , push_tokens/2
         ]).
@@ -101,31 +100,34 @@ bin(Bin, Opts) when is_binary(Bin) ->
 state(#state{bpart = BPart} = State) ->
     start(bel_scan_bpart:get_bin(BPart), State).
 
+state(Bin, #state{bpart = BPart} = State) when is_binary(Bin) ->
+    start(Bin, State#state{
+        bpart = bel_scan_bpart:set_bin(Bin, BPart)
+    }).
+
 fold(#state{} = State, Funs) ->
     lists:foldl(fun(F, S) -> F(S) end, State, Funs).
 
-text_token(Text, State) ->
-    text_token(Text, State#state.prev_loc, State#state.loc).
+text_token(Text, #state{} = State) ->
+    Loc = {State#state.prev_loc, State#state.loc},
+    token(text, Text, ?DEFAULT_META, Loc);
+text_token(Text, Loc) ->
+    token(text, Text, ?DEFAULT_META, Loc).
 
-text_token(Text, InitLoc, EndLoc) ->
-    token(text, Text, InitLoc, EndLoc).
+token(Id, Value, Loc) ->
+    token(Id, Value, ?DEFAULT_META, Loc).
 
-token(Id, Value, {InitLoc, EndLoc}) ->
-    token(Id, Value, InitLoc, EndLoc, ?DEFAULT_META).
+token(Id, Value, Metadata, Loc) ->
+    {Id, anno(Loc, Metadata), Value}.
 
-token(Id, Value, InitLoc, EndLoc) ->
-    token(Id, Value, InitLoc, EndLoc, ?DEFAULT_META).
-
-token(Id, Value, InitLoc, EndLoc, Metadata) ->
-    {Id, anno(InitLoc, EndLoc, Metadata), Value}.
-
-anno(InitLoc0, EndLoc0, Metadata) ->
+anno({InitLoc0, EndLoc0}, Metadata) ->
     InitLoc = bel_scan_loc:to_tuple(InitLoc0),
     EndLoc = bel_scan_loc:to_tuple(EndLoc0),
-    {InitLoc, EndLoc, Metadata}.
+    {{InitLoc, EndLoc}, Metadata}.
 
 clear_text(#state{bpart = BPart} = State) ->
-    State#state{bpart = bel_scan_bpart:set_len(0, BPart)}.
+    Pos = bel_scan_loc:get_pos(State#state.loc),
+    State#state{bpart = bel_scan_bpart:reset_pos(Pos, BPart)}.
 
 push_token(Token, #state{tokens = Tokens} = State) ->
     State#state{tokens = Tokens ++ [Token]}.
@@ -182,14 +184,14 @@ init_engine({Mod, Opts}) when is_atom(Mod) ->
 start(Bin0, State0) ->
     State = handle_start(Bin0, State0),
     Bin = bel_scan_bpart:get_bin(State#state.bpart),
-    continue(scan, Bin, State).
+    continue(find_start_markers, Bin, State).
 
 continue(scan, <<>>, State) ->
     terminate(State);
 continue(scan, <<Rest0/binary>>, State) ->
     case bel_scan_read:bin(Rest0) of
         {{new_ln, Incr}, Rest} ->
-            continue(scan, Rest, fold(State, [
+            continue(find_start_markers, Rest, fold(State, [
                 fun(S) -> S#state{loc = new_ln(S#state.loc)} end,
                 fun(S) -> S#state{bpart = incr_len(Incr, S#state.bpart)} end
             ]));
