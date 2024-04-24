@@ -66,7 +66,7 @@ handle_match({?MODULE, MarkerId, _Text, Captured, Loc}, State) ->
     [_SMarker, Expr, _EMarker] = Captured,
     Token = bel_scan:token(MarkerId, Expr, Loc),
     {reply, [Token], State};
-handle_match(_Match, State) ->
+handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->

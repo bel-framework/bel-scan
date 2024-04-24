@@ -42,7 +42,7 @@
         , set_first_col/2
         ]).
 
--export_type([ t/0 ]).
+-export_type([ t/0, pos/0 ]).
 
 -define(FIRST_POS, 0).
 -define(FIRST_LN, 1).
@@ -55,6 +55,7 @@
 -record(loc, { pos, ln, col, first_ln, first_col }).
 
 -opaque t() :: #loc{}.
+-type pos() :: non_neg_integer().
 
 %%%=====================================================================
 %%% API
@@ -80,7 +81,10 @@ read(Bin, #loc{} = Loc) when is_binary(Bin) ->
 do_read(Bin, Loc) ->
     case bel_scan_read:bin(Bin) of
         {{new_ln, Incr}, Rest} ->
-            do_read(Rest, new_ln(incr_col(Incr, Loc)));
+            do_read(Rest,
+                set_ln(Loc#loc.ln+1,
+                    set_col(Loc#loc.first_col,
+                        incr_pos(Incr, Loc))));
         {{continue, Incr}, Rest} ->
             do_read(Rest, incr_col(Incr, Loc));
         terminate ->
@@ -92,6 +96,10 @@ incr(#loc{ln = Ln, col = Col}, Loc) ->
 incr({Ln, Col}, #loc{first_ln = Ln} = Loc) ->
     incr_pos(Col - Loc#loc.first_col,
         set_col(Col - Loc#loc.first_col + Loc#loc.col, Loc));
+incr({Ln, Col}, #loc{ln = LocLn} = Loc) when Ln < LocLn ->
+    set_pos(Loc#loc.pos,
+        set_col(Col,
+            set_ln(Ln + Loc#loc.ln - Loc#loc.first_ln, Loc)));
 incr({Ln, Col}, #loc{} = Loc) ->
     set_pos(Loc#loc.pos,
         set_col(Col,

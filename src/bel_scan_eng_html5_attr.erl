@@ -44,7 +44,7 @@ handle_match({?MODULE, attribute, Text, [<<>>, <<>>, K, V], Loc}, State) ->
 handle_match({?MODULE, attribute, Text, [K, V], Loc}, State) ->
     Token = bel_scan:token(attribute, Text, {K, V}, Loc),
     {reply, [Token], State};
-handle_match(_Match, State) ->
+handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->

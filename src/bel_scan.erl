@@ -58,18 +58,19 @@
 -import(bel_scan_loc,   [ new_ln/1, incr_col/2 ]).
 -import(bel_scan_bpart, [ incr_len/2, get_part/1 ]).
 
--define(DEFAULT_OPTS, #{}).
--define(DEFAULT_META, undefined).
-
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
+
+-define(DEFAULT_OPTS, #{}).
+-define(DEFAULT_META, undefined).
 
 -record(state, { engines  :: [engine()]
                , bpart    :: bpart()
                , loc      :: loc()
                , prev_loc :: loc()
                , tokens   :: [token()]
+               , init_pos :: pos()
                }).
 
 -opaque t()    :: #state{}.
@@ -77,6 +78,7 @@
 -type bpart()  :: bel_scan_bpart:t().
 -type loc()    :: bel_scan_loc:t().
 -type token()  :: bel_scan_token:t().
+-type pos()    :: bel_scan_loc:pos().
 
 %%%=====================================================================
 %%% API
@@ -91,7 +93,8 @@ new(Params) when is_map(Params) ->
         })),
         loc = Loc,
         prev_loc = maps:get(prev_loc, Params, Loc),
-        tokens = maps:get(tokens, Params, [])
+        tokens = maps:get(tokens, Params, []),
+        init_pos = maps:get(init_pos, Params, bel_scan_loc:get_pos(Loc))
     }.
 
 bin(Bin, Opts) when is_binary(Bin) ->
@@ -127,7 +130,7 @@ anno({InitLoc0, EndLoc0}, Metadata) ->
 
 clear_text(#state{bpart = BPart} = State) ->
     Pos = bel_scan_loc:get_pos(State#state.loc),
-    State#state{bpart = bel_scan_bpart:reset_pos(Pos, BPart)}.
+    State#state{bpart = bel_scan_bpart:reset_pos(Pos - State#state.init_pos, BPart)}.
 
 push_token(Token, #state{tokens = Tokens} = State) ->
     State#state{tokens = Tokens ++ [Token]}.
@@ -211,7 +214,7 @@ continue(find_start_markers, <<Rest0/binary>>, State0) ->
             MatchTextLoc = bel_scan_loc:read(MatchText),
             EndLoc = bel_scan_loc:incr(MatchTextLoc, InitLoc),
             Pos = bel_scan_loc:get_pos(MatchTextLoc) + bel_scan_loc:get_pos(InitLoc),
-            BPart = bel_scan_bpart:reset_pos(Pos, State1#state.bpart),
+            BPart = bel_scan_bpart:reset_pos(Pos - State1#state.init_pos, State1#state.bpart),
             Match = {Mod, MarkerId, MatchText, Captured, {InitLoc, EndLoc}},
             continue({handle_match, Match}, Rest, State1#state{
                 loc = EndLoc,
