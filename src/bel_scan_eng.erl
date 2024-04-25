@@ -71,7 +71,7 @@
 
 -include("bel_scan_eng.hrl").
 
--opaque t()       :: #engine{}.
+-type t()         :: #engine{}.
 -type scan()      :: bel_scan:t().
 -type marker_id() :: bel_scan_mark:id().
 -type token()     :: bel_scan_token:t().

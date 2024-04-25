@@ -18,7 +18,7 @@
     value :: term()
 }).
 
-% -opaque t()   :: #token{}.
+% -type t()   :: #token{}.
 -type t()     :: {id(), anno(), value()}.
 -type id()    :: atom().
 -type anno()  :: bel_scan_anno:t().

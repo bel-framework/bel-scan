@@ -69,7 +69,7 @@
 -define(DEFAULT_OPTS, #{}).
 -define(DEFAULT_META, undefined).
 
--record(state, { engines  :: [engine()]
+-record(state, { engines  :: [{module(), engine()}]
                , bpart    :: bpart()
                , loc      :: loc()
                , prev_loc :: loc()
@@ -200,6 +200,8 @@ start(Bin0, State0) ->
 
 continue(scan, <<>>, State) ->
     terminate(State);
+continue(find_start_markers, <<>>, State) ->
+    terminate(State);
 continue(scan, <<Rest0/binary>>, State) ->
     case bel_scan_read:bin(Rest0) of
         {{new_ln, Incr}, Rest} ->
@@ -235,7 +237,7 @@ continue(find_start_markers, <<Rest0/binary>>, State0) ->
     end;
 continue({handle_match, Match}, Rest, State0) ->
     State = handle_match(Match, State0),
-    continue(scan, Rest, State).
+    continue(find_start_markers, Rest, State).
 
 terminate(State0) ->
     State = handle_text(State0),

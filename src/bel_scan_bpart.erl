@@ -50,7 +50,7 @@
                , len      :: non_neg_integer()
                , init_len :: non_neg_integer()
                }).
--opaque t() :: #bpart{}.
+-type t() :: #bpart{}.
 
 %%%=====================================================================
 %%% API

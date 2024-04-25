@@ -54,7 +54,7 @@
 
 -record(loc, { pos, ln, col, first_ln, first_col }).
 
--opaque t() :: #loc{}.
+-type t()   :: #loc{}.
 -type pos() :: non_neg_integer().
 
 %%%=====================================================================
