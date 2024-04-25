@@ -1,8 +1,31 @@
+%%%---------------------------------------------------------------------
+%%% @copyright 2024 William Fank Thomé
+%%% @author William Fank Thomé <willilamthome@hotmail.com>
+%%% @doc Engine behaviour module.
+%%%
+%%% Copyright 2024 William Fank Thomé
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
+%%% @end
+%%%---------------------------------------------------------------------
 -module(bel_scan_eng).
 
--export([ compile/1
-        , fold/2
-        , get_module/1
+% API functions
+-export([ compile/1, fold/2 ]).
+
+% State getters and setters functions
+-export([ get_module/1
         , set_module/2
         , get_markers/1
         , set_markers/2
@@ -21,7 +44,21 @@
              , captured/0
              ]).
 
-% Callbacks
+-include("bel_scan_eng.hrl").
+
+-type t()         :: #engine{}.
+-type scan()      :: bel_scan:t().
+-type marker_id() :: bel_scan_mark:id().
+-type token()     :: bel_scan:token().
+-type loc()       :: bel_scan_loc:t().
+-type opts()      :: term().
+-type state()     :: term().
+-type re_group()  :: binary().
+-type captured()  :: [re_group()].
+
+%%%=====================================================================
+%%% Callbacks
+%%%=====================================================================
 
 -callback init(Opts) -> Engine
     when Opts     :: opts()
@@ -67,25 +104,19 @@
                  | {halt, scan()}
                  .
 
-% Libs
-
--include("bel_scan_eng.hrl").
-
--type t()         :: #engine{}.
--type scan()      :: bel_scan:t().
--type marker_id() :: bel_scan_mark:id().
--type token()     :: bel_scan_token:t().
--type loc()       :: bel_scan_loc:t().
--type opts()      :: term().
--type state()     :: term().
--type re_group()  :: binary().
--type captured()  :: [re_group()].
+%%%=====================================================================
+%%% API functions
+%%%=====================================================================
 
 compile(#engine{markers = Markers} = Eng) ->
     Eng#engine{markers = [bel_scan_mark:compile(M) || M <- Markers]}.
 
 fold(#engine{} = Eng, Funs) when is_list(Funs) ->
     lists:foldl(fun(F, E) -> F(E) end, Eng, Funs).
+
+%%%=====================================================================
+%%% State getters and setters functions
+%%%=====================================================================
 
 get_module(#engine{module = Module}) ->
     Module.
@@ -104,3 +135,9 @@ get_state(#engine{state = State}) ->
 
 set_state(State, #engine{} = Eng) ->
     Eng#engine{state = State}.
+
+%%%=====================================================================
+%%% Internal functions
+%%%=====================================================================
+
+% nothing here yet!

@@ -21,12 +21,16 @@
 %%%---------------------------------------------------------------------
 -module(bel_scan_bpart).
 
+% API functions
 -export([ new/1
         , reset_pos/2
         , incr_pos/2
         , incr_len/2
         , get_part/1
-        , get_bin/1
+        ]).
+
+% State getters and setters functions
+-export([ get_bin/1
         , set_bin/2
         , get_pos/1
         , set_pos/2
@@ -36,7 +40,7 @@
         , set_init_len/2
         ]).
 
--export_type([ t/0 ]).
+-export_type([ t/0, pos/0, len/0 ]).
 
 -define(FIRST_POS, 0).
 -define(INIT_LEN, 0).
@@ -46,14 +50,16 @@
 -endif.
 
 -record(bpart, { bin      :: binary()
-               , pos      :: non_neg_integer()
-               , len      :: non_neg_integer()
-               , init_len :: non_neg_integer()
+               , pos      :: pos()
+               , len      :: len()
+               , init_len :: len()
                }).
--type t() :: #bpart{}.
+-type t()   :: #bpart{}.
+-type pos() :: non_neg_integer().
+-type len() :: non_neg_integer().
 
 %%%=====================================================================
-%%% API
+%%% API functions
 %%%=====================================================================
 
 new(Params) when is_map(Params) ->
@@ -80,6 +86,10 @@ incr_len(N, #bpart{len = Len} = BPart) ->
 get_part(#bpart{bin = Bin} = BPart) ->
     binary:part(Bin, BPart#bpart.pos, BPart#bpart.len).
 
+%%%=====================================================================
+%%% State getters and setters functions
+%%%=====================================================================
+
 get_bin(#bpart{bin = Bin}) ->
     Bin.
 
@@ -103,6 +113,12 @@ get_init_len(#bpart{init_len = InitLen}) ->
 
 set_init_len(InitLen, #bpart{} = BPart) ->
     BPart#bpart{init_len = InitLen}.
+
+%%%=====================================================================
+%%% Internal functions
+%%%=====================================================================
+
+% nothing here yet!
 
 %%%=====================================================================
 %%% Tests

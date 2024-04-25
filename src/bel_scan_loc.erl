@@ -21,6 +21,7 @@
 %%%---------------------------------------------------------------------
 -module(bel_scan_loc).
 
+% API functions
 -export([ new/1
         , read/1
         , read/2
@@ -30,7 +31,10 @@
         , incr_col/2
         , new_ln/1
         , to_tuple/1
-        , get_pos/1
+        ]).
+
+% State getters and setters functions
+-export([ get_pos/1
         , set_pos/2
         , get_ln/1
         , set_ln/2
@@ -42,7 +46,7 @@
         , set_first_col/2
         ]).
 
--export_type([ t/0, pos/0 ]).
+-export_type([ t/0, pos/0, pos_tuple/0 ]).
 
 -define(FIRST_POS, 0).
 -define(FIRST_LN, 1).
@@ -54,11 +58,12 @@
 
 -record(loc, { pos, ln, col, first_ln, first_col }).
 
--type t()   :: #loc{}.
--type pos() :: non_neg_integer().
+-type t()         :: #loc{}.
+-type pos()       :: non_neg_integer().
+-type pos_tuple() :: {pos(), pos()}.
 
 %%%=====================================================================
-%%% API
+%%% API functions
 %%%=====================================================================
 
 new(Params) when is_map(Params) ->
@@ -130,6 +135,10 @@ new_ln(#loc{ln = Ln, first_col = FirstCol, pos = Pos} = Loc) ->
 to_tuple(#loc{ln = Ln, col = Col}) ->
     {Ln, Col}.
 
+%%%=====================================================================
+%%% State getters and setters functions
+%%%=====================================================================
+
 get_pos(#loc{pos = Pos}) ->
     Pos.
 
@@ -159,6 +168,12 @@ get_first_col(#loc{first_col = FirstCol}) ->
 
 set_first_col(FirstCol, #loc{} = Loc) ->
     Loc#loc{first_col = FirstCol}.
+
+%%%=====================================================================
+%%% Internal functions
+%%%=====================================================================
+
+% nothing here yet!
 
 %%%=====================================================================
 %%% Tests

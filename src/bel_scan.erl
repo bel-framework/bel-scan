@@ -22,7 +22,7 @@
 -module(bel_scan).
 -compile(inline_list_funcs).
 
-% API
+% API functions
 -export([ new/1
         , bin/2
         , state/1
@@ -55,6 +55,12 @@
              , bpart/0
              , loc/0
              , token/0
+             , token_id/0
+             , token_anno/0
+             , token_metadata/0
+             , token_loc/0
+             , token_value/0
+             , pos/0
              ]).
 
 -import(bel_scan_loc,   [ new_ln/1, incr_col/2 ]).
@@ -77,15 +83,20 @@
                , init_pos :: pos()
                }).
 
--opaque t()    :: #state{}.
--type engine() :: bel_scan_eng:t().
--type bpart()  :: bel_scan_bpart:t().
--type loc()    :: bel_scan_loc:t().
--type token()  :: bel_scan_token:t().
--type pos()    :: bel_scan_loc:pos().
+-opaque t()            :: #state{}.
+-type engine()         :: bel_scan_eng:t().
+-type bpart()          :: bel_scan_bpart:t().
+-type loc()            :: bel_scan_loc:t().
+-type token()          :: {token_id(), token_anno(), token_value()}.
+-type token_id()       :: atom().
+-type token_anno()     :: {{token_loc(), token_loc()}, token_metadata()}.
+-type token_metadata() :: term().
+-type token_loc()      :: bel_scan_loc:pos_tuple().
+-type token_value()    :: binary().
+-type pos()            :: bel_scan_loc:pos().
 
 %%%=====================================================================
-%%% API
+%%% API functions
 %%%=====================================================================
 
 new(Params) when is_map(Params) ->

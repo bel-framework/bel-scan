@@ -1,8 +1,31 @@
+%%%---------------------------------------------------------------------
+%%% @copyright 2024 William Fank Thomé
+%%% @author William Fank Thomé <willilamthome@hotmail.com>
+%%% @doc Marker module.
+%%%
+%%% Copyright 2024 William Fank Thomé
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
+%%% @end
+%%%---------------------------------------------------------------------
 -module(bel_scan_mark).
 
--export([ compile/1
-        , re_match/2
-        , get_id/1
+% API functions
+-export([ compile/1, re_match/2 ]).
+
+% State getters and setters functions
+-export([ get_id/1
         , set_id/2
         , get_re/1
         , set_re/2
@@ -20,7 +43,13 @@
 
 -type t()  :: #marker{}.
 -type id() :: atom().
--type re() :: binary() | {re_pattern, _, _, _, _}. % re:mp/0 isn't exported.
+-type re() :: binary()
+            | {re_pattern, _, _, _, _} % re:mp/0 isn't exported.
+            .
+
+%%%=====================================================================
+%%% API functions
+%%%=====================================================================
 
 compile(#marker{} = Marker) ->
     case compile_re(Marker#marker.re) of
@@ -44,6 +73,10 @@ re_match(#marker{re = RE}, Bin) ->
             nomatch
     end.
 
+%%%=====================================================================
+%%% State getters and setters functions
+%%%=====================================================================
+
 get_id(#marker{id = Id}) ->
     Id.
 
@@ -55,3 +88,9 @@ get_re(#marker{re = RE}) ->
 
 set_re(RE, #marker{} = Marker) ->
     Marker#marker{re = RE}.
+
+%%%=====================================================================
+%%% Internal functions
+%%%=====================================================================
+
+% nothing here yet!
