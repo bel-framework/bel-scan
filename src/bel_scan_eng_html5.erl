@@ -38,11 +38,15 @@
 
 -define(CHILD_NODES, "((?:(?R)|(?:(?!<\\/?(?2)).*?))*)").
 
+-define(ATTRS_ENGINES, [bel_scan_eng_html5_attr]).
+
+-record(state, { attrs_engines :: [module()] }).
+
 %%%=====================================================================
 %%% bel_scan_eng callbacks
 %%%=====================================================================
 
-init(_Opts) ->
+init(Opts) ->
     #engine{
         markers = [
             #marker{
@@ -71,55 +75,65 @@ init(_Opts) ->
                     ?CLOSING_TAG
                 >>
             }
-        ]
+        ],
+        state = #state{
+            attrs_engines = bel_scan:init_engines(
+                maps:get(attrs_engines, Opts, ?ATTRS_ENGINES)
+            )
+        }
     }.
 
-handle_start(_Bin, State) ->
-    {noreply, State}.
+handle_start(_Bin, Scan) ->
+    {noreply, Scan}.
 
-handle_text(_Text, State) ->
-    {noreply, State}.
+handle_text(_Text, Scan) ->
+    {noreply, Scan}.
 
-handle_match({?MODULE, doctype, _Text, [], Loc}, State) ->
+handle_match({?MODULE, doctype, _Text, [], Loc}, Scan) ->
     Token = bel_scan:token(doctype, <<"html">>, Loc),
-    {reply, [Token], State};
-handle_match({?MODULE, special_tag, _Text, Captured, Loc}, State) ->
+    {reply, [Token], Scan};
+handle_match({?MODULE, special_tag, _Text, Captured, Loc}, Scan) ->
     [OAngB, Tag, Attrs, _CAngB, Content, _CTag] = Captured,
-    Metadata = {attributes(Attrs, [OAngB, Tag], Loc), Content},
+    Metadata = {attributes(Attrs, [OAngB, Tag], Loc, Scan), Content},
     Token = bel_scan:token(special_tag, Tag, Metadata, Loc),
-    {reply, [Token], State};
-handle_match({?MODULE, void_tag, _Text, Captured, Loc}, State) ->
+    {reply, [Token], Scan};
+handle_match({?MODULE, void_tag, _Text, Captured, Loc}, Scan) ->
     [OAngB, Tag, Attrs, _CAngB] = Captured,
-    Metadata = attributes(Attrs, [OAngB, Tag], Loc),
+    Metadata = attributes(Attrs, [OAngB, Tag], Loc, Scan),
     Token = bel_scan:token(void_tag, Tag, Metadata, Loc),
-    {reply, [Token], State};
-handle_match({?MODULE, elem_tag, _Text, Captured, Loc}, State) ->
+    {reply, [Token], Scan};
+handle_match({?MODULE, elem_tag, _Text, Captured, Loc}, Scan) ->
     [OAngB, Tag, Attrs, CAngB, ChildNodes, _CTag] = Captured,
     Metadata = {
-        attributes(Attrs, [OAngB, Tag], Loc),
-        child_nodes(ChildNodes, [OAngB, Tag, Attrs, CAngB], Loc, State)
+        attributes(Attrs, [OAngB, Tag], Loc, Scan),
+        child_nodes(ChildNodes, [OAngB, Tag, Attrs, CAngB], Loc, Scan)
     },
     Token = bel_scan:token(elem_tag, Tag, Metadata, Loc),
-    {reply, [Token], State};
-handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
-    {noreply, State}.
+    {reply, [Token], Scan};
+handle_match({Mod, _, _, _, _}, Scan) when Mod =/= ?MODULE ->
+    {noreply, Scan}.
 
-handle_terminate(_Tokens, State) ->
-    {noreply, State}.
+handle_terminate(_Tokens, Scan) ->
+    {noreply, Scan}.
 
 %%%=====================================================================
 %%% Internal functions
 %%%=====================================================================
 
-attributes(Bin, PrevParts, Loc) ->
+state(Scan) ->
+    {?MODULE, Engine} = bel_scan:lookup_engine(?MODULE, Scan),
+    Engine#engine.state.
+
+attributes(Bin, PrevParts, Loc, Scan) ->
+    State = state(Scan),
     bel_scan:get_tokens(bel_scan:bin(Bin, #{
-        engines => [bel_scan_eng_html5_attr],
+        engines => State#state.attrs_engines,
         loc => init_loc(PrevParts, Loc)
     })).
 
-child_nodes(Bin, PrevParts, Loc, State) ->
+child_nodes(Bin, PrevParts, Loc, Scan) ->
     bel_scan:get_tokens(bel_scan:bin(Bin, #{
-        engines => bel_scan:get_engines(State),
+        engines => bel_scan:get_engines(Scan),
         loc => init_loc(PrevParts, Loc)
     })).
 

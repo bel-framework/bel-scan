@@ -33,6 +33,8 @@
         , token/4
         , push_token/2
         , push_tokens/2
+        , init_engines/1
+        , lookup_engine/2
         ]).
 
 % State getters and setters functions
@@ -57,6 +59,8 @@
 
 -import(bel_scan_loc,   [ new_ln/1, incr_col/2 ]).
 -import(bel_scan_bpart, [ incr_len/2, get_part/1 ]).
+
+-include("bel_scan_eng.hrl").
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -138,6 +142,12 @@ push_token(Token, #state{tokens = Tokens} = State) ->
 push_tokens(Tokens, State) when is_list(Tokens) ->
     lists:foldl(fun push_token/2, State, Tokens).
 
+init_engines(Modules) ->
+    [init_engine(Mod) || Mod <- Modules].
+
+lookup_engine(Mod, #state{engines = Engines}) ->
+    proplists:lookup(Mod, Engines).
+
 %%%=====================================================================
 %%% State getters and setters functions
 %%%=====================================================================
@@ -176,13 +186,12 @@ set_tokens(Tokens, #state{} = State) ->
 %%% Internal functions
 %%%=====================================================================
 
-init_engines(Modules) ->
-    [init_engine(Mod) || Mod <- Modules].
-
 init_engine(Mod) when is_atom(Mod) ->
     init_engine({Mod, ?DEFAULT_OPTS});
-init_engine({Mod, Opts}) when is_atom(Mod) ->
-    {Mod, bel_scan_eng:compile(Mod:init(Opts))}.
+init_engine({Mod, Opts}) when is_atom(Mod), is_map(Opts) ->
+    {Mod, bel_scan_eng:compile(Mod:init(Opts))};
+init_engine({Mod, #engine{} = Eng}) when is_atom(Mod) ->
+    {Mod, Eng}.
 
 start(Bin0, State0) ->
     State = handle_start(Bin0, State0),
