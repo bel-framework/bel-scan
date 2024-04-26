@@ -68,10 +68,6 @@
 
 -include("bel_scan_eng.hrl").
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 -define(DEFAULT_OPTS, #{}).
 -define(DEFAULT_META, undefined).
 
@@ -137,15 +133,6 @@ token(Id, Value, Loc) ->
 
 token(Id, Value, Metadata, Loc) ->
     {Id, anno(Loc, Metadata), Value}.
-
-anno({InitLoc0, EndLoc0}, Metadata) ->
-    InitLoc = bel_scan_loc:to_tuple(InitLoc0),
-    EndLoc = bel_scan_loc:to_tuple(EndLoc0),
-    {{InitLoc, EndLoc}, Metadata}.
-
-clear_text(#state{bpart = BPart} = State) ->
-    Pos = bel_scan_loc:get_pos(State#state.loc),
-    State#state{bpart = bel_scan_bpart:reset_pos(Pos - State#state.init_pos, BPart)}.
 
 push_token(Token, #state{tokens = Tokens} = State) ->
     State#state{tokens = Tokens ++ [Token]}.
@@ -235,7 +222,7 @@ continue(find_start_markers, <<Rest0/binary>>, State0) ->
             InitLoc = State1#state.loc,
             EndLoc = bel_scan_loc:read(MatchText, State1#state.loc),
             Pos = bel_scan_loc:get_pos(EndLoc),
-            BPart = bel_scan_bpart:reset_pos(Pos - State1#state.init_pos, State1#state.bpart),
+            BPart = reset_bpart_pos(Pos, State1),
             Match = {Mod, MarkerId, MatchText, Captured, {InitLoc, EndLoc}},
             continue({handle_match, Match}, Rest, State1#state{
                 loc = EndLoc,
@@ -344,13 +331,14 @@ do_handle_terminate([{Mod, _Eng} | Engs], Tokens0, State0) ->
 do_handle_terminate([], Tokens, State) ->
     State#state{tokens = Tokens}.
 
-%%%=====================================================================
-%%% Tests
-%%%=====================================================================
+anno({InitLoc0, EndLoc0}, Metadata) ->
+    InitLoc = bel_scan_loc:to_tuple(InitLoc0),
+    EndLoc = bel_scan_loc:to_tuple(EndLoc0),
+    {{InitLoc, EndLoc}, Metadata}.
 
--ifdef(TEST).
--compile([export_all, nowarn_export_all]).
+clear_text(#state{loc = Loc} = State) ->
+    Pos = bel_scan_loc:get_pos(Loc),
+    State#state{bpart = reset_bpart_pos(Pos, State)}.
 
-% TODO
-
--endif.
+reset_bpart_pos(Pos, #state{init_pos = InitPos, bpart = BPart}) ->
+    bel_scan_bpart:reset_pos(Pos - InitPos, BPart).

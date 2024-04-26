@@ -42,8 +42,11 @@ init(_Opts) ->
             #marker{
                 id = attribute,
                 re = <<
+                    % case double quote
                     "(\\w+)=\\\"(.*?[^\\\\\"])\\\"" "|"
+                    % case single quote
                     "(\\w+)='(.*?[^\\\\'])'" "|"
+                    % case attribute
                     "(\\w+)"
                 >>
             }
@@ -56,14 +59,17 @@ handle_start(_Bin, State) ->
 handle_text(_Text, State) ->
     {halt, State}.
 
-handle_match({?MODULE, attribute, Text, [<<>>, <<>>, <<>>, <<>>, K], Loc}, State) ->
-    Token = bel_scan:token(attribute, Text, K, Loc),
+% case double quote
+handle_match({?MODULE, attribute, Text, [K, V], Loc}, State) ->
+    Token = bel_scan:token(attribute, Text, {K, V}, Loc),
     {reply, [Token], State};
+% case single quote
 handle_match({?MODULE, attribute, Text, [<<>>, <<>>, K, V], Loc}, State) ->
     Token = bel_scan:token(attribute, Text, {K, V}, Loc),
     {reply, [Token], State};
-handle_match({?MODULE, attribute, Text, [K, V], Loc}, State) ->
-    Token = bel_scan:token(attribute, Text, {K, V}, Loc),
+% case attribute
+handle_match({?MODULE, attribute, Text, [<<>>, <<>>, <<>>, <<>>, K], Loc}, State) ->
+    Token = bel_scan:token(attribute, Text, K, Loc),
     {reply, [Token], State};
 handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
