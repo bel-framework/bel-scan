@@ -233,9 +233,8 @@ continue(find_start_markers, <<Rest0/binary>>, State0) ->
         {match, {Mod, MarkerId, MatchText, Captured, Rest}} ->
             State1 = handle_text(State0),
             InitLoc = State1#state.loc,
-            MatchTextLoc = bel_scan_loc:read(MatchText),
-            EndLoc = bel_scan_loc:incr(MatchTextLoc, InitLoc),
-            Pos = bel_scan_loc:get_pos(MatchTextLoc) + bel_scan_loc:get_pos(InitLoc),
+            EndLoc = bel_scan_loc:read(MatchText, State1#state.loc),
+            Pos = bel_scan_loc:get_pos(EndLoc),
             BPart = bel_scan_bpart:reset_pos(Pos - State1#state.init_pos, State1#state.bpart),
             Match = {Mod, MarkerId, MatchText, Captured, {InitLoc, EndLoc}},
             continue({handle_match, Match}, Rest, State1#state{

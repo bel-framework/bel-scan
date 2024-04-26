@@ -25,7 +25,6 @@
 -export([ new/1
         , read/1
         , read/2
-        , incr/2
         , incr_pos/2
         , incr_ln/2
         , incr_col/2
@@ -95,20 +94,6 @@ do_read(Bin, Loc) ->
         terminate ->
             Loc
     end.
-
-incr(#loc{ln = Ln, col = Col}, Loc) ->
-    incr({Ln, Col}, Loc);
-incr({Ln, Col}, #loc{first_ln = Ln} = Loc) ->
-    incr_pos(Col - Loc#loc.first_col,
-        set_col(Col - Loc#loc.first_col + Loc#loc.col, Loc));
-incr({Ln, Col}, #loc{ln = LocLn} = Loc) when Ln < LocLn ->
-    set_pos(Loc#loc.pos,
-        set_col(Col,
-            set_ln(Ln + Loc#loc.ln - Loc#loc.first_ln, Loc)));
-incr({Ln, Col}, #loc{} = Loc) ->
-    set_pos(Loc#loc.pos,
-        set_col(Col,
-            set_ln(Ln, Loc))).
 
 incr_pos(N, #loc{pos = Pos} = Loc) ->
     Loc#loc{pos = Pos+N}.

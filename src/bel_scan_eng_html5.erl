@@ -159,8 +159,7 @@ child_nodes(Bin, PrevParts, Loc, Scan) ->
     })).
 
 init_loc(PrevParts, {InitLoc, _EndLoc}) ->
-    BLoc = bel_scan_loc:read(iolist_to_binary(PrevParts)),
-    bel_scan_loc:incr(BLoc, InitLoc).
+    bel_scan_loc:read(iolist_to_binary(PrevParts), InitLoc).
 
 %%%=====================================================================
 %%% Tests
@@ -246,28 +245,28 @@ scan_test() ->
       , ?assertEqual([
             {text,{{{1,1},{2,1}},undefined},<<"\n">>},
             {special_tag,
-                {{{2,1},{5,10}},{[],<<"\n\n    <div>Foo</div>\n\n">>}},
+                {{{2,1},{6,10}},{[],<<"\n\n    <div>Foo</div>\n\n">>}},
                 <<"script">>},
-            {text,{{{5,10},{6,1}},undefined},<<"\n">>},
+            {text,{{{6,10},{7,1}},undefined},<<"\n">>},
             {elem_tag,
-                {{{6,1},{6,34}},
+                {{{7,1},{7,34}},
                 {[],
-                [{text,{{{6,7},{6,10}},undefined},<<"   ">>},
-                    {elem_tag,
-                        {{{6,10},{6,26}},
+                [{text,{{{7,7},{7,10}},undefined},<<"   ">>},
+                {elem_tag,
+                    {{{7,10},{7,26}},
                         {[],
                         [{text,
-                            {{{6,13},{6,22}},undefined},
+                            {{{7,13},{7,22}},undefined},
                             <<"  ooooo  ">>}]}},
-                        <<"i">>},
-                    {text,{{{6,26},{6,27}},undefined},<<" ">>}]}},
+                    <<"i">>},
+                {text,{{{7,26},{7,27}},undefined},<<" ">>}]}},
                 <<"span">>},
-            {text,{{{6,34},{9,1}},undefined},<<"ript>\n">>},
+            {text,{{{7,34},{10,1}},undefined},<<"\nbar\n\n">>},
             {special_tag,
-                {{{9,1},{13,21}},
+                {{{10,1},{14,21}},
                 {[],<<"\n\n    Title\n\n            ">>}},
                 <<"title">>},
-            {text,{{{13,21},{14,1}},undefined},<<"t">>}
+            {text,{{{14,21},{15,1}},undefined},<<"\n">>}
         ], scan_(?MLINE))}
     ].
 
