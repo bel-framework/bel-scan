@@ -42,8 +42,10 @@ init(_Opts) ->
             #marker{
                 id = expr,
                 re = <<
-                    "({{\\s*)(.*[^}]+[^{]+[^\\s])(\\s*}})" "|"
-                    "({{\\s*)(.*[^\\s])(\\s*}})"
+                    % nested case {{ {{ foo}} }}
+                    "{{\\s*(.*?[^}]+[^{]+[^\\s])\\s*}}" "|"
+                    % simple case {{ foo }}
+                    "{{\\s*(.*?[^\\s])\\s*}}"
                 >>
             }
         ]
@@ -55,11 +57,15 @@ handle_start(_Bin, State) ->
 handle_text(_Text, State) ->
     {noreply, State}.
 
-handle_match({?MODULE, expr, _Text, Captured, Loc}, State) ->
-    [_SMarker, Expr, _EMarker] = Captured,
+% nested case
+handle_match({?MODULE, expr, _Text, [Expr], Loc}, State) ->
     Token = bel_scan:token(expr, Expr, Loc),
     {reply, [Token], State};
-handle_match(_Match, State) ->
+% simple case
+handle_match({?MODULE, expr, _Text, [<<>>, Expr], Loc}, State) ->
+    Token = bel_scan:token(expr, Expr, Loc),
+    {reply, [Token], State};
+handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->

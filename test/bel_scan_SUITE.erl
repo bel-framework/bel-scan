@@ -145,15 +145,24 @@ bin(Config) when is_list(Config) ->
         {text,{{{1,29},{1,33}},undefined},<<" bar">>}
     ] = bel_scan:get_tokens(bel_scan:bin(SingleLnBin, Opts)),
 
-    MultiLnBin = <<
-"foo {{ {{A, b},
- {0, \"C\"}} }}
- bar"
-    >>,
+    MultiLnBin = <<"foo
+    {{ {{A, b},
+        {0, \"C\"}} }}
+ bar
+
+{{ {{ {{ d }} }} }}  {{ a
+
+}}
+">>,
     [
-        {text,{{{1,1},{1,5}},undefined},<<"foo ">>},
-        {expr,{{{1,5},{2,14}},undefined},<<"{{A, b},\n {0, \"C\"}}">>},
-        {text,{{{2,14},{3,5}},undefined},<<"\n bar">>}
+        {text,{{{1,1},{2,5}},undefined},<<"foo\n    ">>},
+        {expr,{{{2,5},{3,21}},undefined},
+                <<"{{A, b},\n        {0, \"C\"}}">>},
+        {text,{{{3,21},{6,1}},undefined},<<"\n bar\n\n">>},
+        {expr,{{{6,1},{6,20}},undefined},<<"{{ {{ d }} }}">>},
+        {text,{{{6,20},{6,22}},undefined},<<"  ">>},
+        {expr,{{{6,22},{8,3}},undefined},<<"a">>},
+        {text,{{{8,3},{9,1}},undefined},<<"\n">>}
     ] = bel_scan:get_tokens(bel_scan:bin(MultiLnBin, Opts)),
 
     ok.
