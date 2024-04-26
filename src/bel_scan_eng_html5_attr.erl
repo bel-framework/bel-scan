@@ -60,18 +60,18 @@ handle_text(_Text, State) ->
     {halt, State}.
 
 % case double quote
-handle_match({?MODULE, attribute, Text, [K, V], Loc}, State) ->
-    Token = bel_scan:token(attribute, Text, {K, V}, Loc),
+handle_match({?MODULE, attribute, [K, V], Anno}, State) ->
+    Token = bel_scan:token(attribute, Anno, {K, V}),
     {reply, [Token], State};
 % case single quote
-handle_match({?MODULE, attribute, Text, [<<>>, <<>>, K, V], Loc}, State) ->
-    Token = bel_scan:token(attribute, Text, {K, V}, Loc),
+handle_match({?MODULE, attribute, [<<>>, <<>>, K, V], Anno}, State) ->
+    Token = bel_scan:token(attribute, Anno, {K, V}),
     {reply, [Token], State};
 % case attribute
-handle_match({?MODULE, attribute, Text, [<<>>, <<>>, <<>>, <<>>, K], Loc}, State) ->
-    Token = bel_scan:token(attribute, Text, K, Loc),
+handle_match({?MODULE, attribute, [<<>>, <<>>, <<>>, <<>>, K], Anno}, State) ->
+    Token = bel_scan:token(attribute, Anno, K),
     {reply, [Token], State};
-handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
+handle_match({Mod, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->

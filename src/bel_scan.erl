@@ -29,8 +29,9 @@
         , state/2
         , fold/2
         , text_token/2
+        , text_token/3
+        , token/2
         , token/3
-        , token/4
         , push_token/2
         , push_tokens/2
         , init_engines/1
@@ -38,7 +39,9 @@
         ]).
 
 % State getters and setters functions
--export([ get_engines/1
+-export([ get_src/1
+        , set_src/2
+        , get_engines/1
         , set_engines/2
         , get_bpart/1
         , set_bpart/2
@@ -51,6 +54,7 @@
         ]).
 
 -export_type([ t/0
+             , src/0
              , engine/0
              , bpart/0
              , loc/0
@@ -71,7 +75,8 @@
 -define(DEFAULT_OPTS, #{}).
 -define(DEFAULT_META, undefined).
 
--record(state, { engines  :: [{module(), engine()}]
+-record(state, { src      :: src()
+               , engines  :: [{module(), engine()}]
                , bpart    :: bpart()
                , loc      :: loc()
                , prev_loc :: loc()
@@ -80,6 +85,7 @@
                }).
 
 -opaque t()            :: #state{}.
+-type src()            :: bel_scan_anno:src().
 -type engine()         :: bel_scan_eng:t().
 -type bpart()          :: bel_scan_bpart:t().
 -type loc()            :: bel_scan_loc:t().
@@ -98,6 +104,7 @@
 new(Params) when is_map(Params) ->
     Loc = maps:get(loc, Params, bel_scan_loc:new(#{})),
     #state{
+        src = maps:get(src, Params, string),
         engines = init_engines(maps:get(engines, Params)),
         bpart = maps:get(bpart, Params, bel_scan_bpart:new(#{
             bin => maps:get(bin, Params, <<>>)
@@ -122,17 +129,24 @@ state(Bin, #state{bpart = BPart} = State) when is_binary(Bin) ->
 fold(#state{} = State, Funs) ->
     lists:foldl(fun(F, S) -> F(S) end, State, Funs).
 
-text_token(Text, #state{} = State) ->
-    Loc = {State#state.prev_loc, State#state.loc},
-    token(text, Text, ?DEFAULT_META, Loc);
-text_token(Text, Loc) ->
-    token(text, Text, ?DEFAULT_META, Loc).
+text_token(Text, State) ->
+    text_token(Text, ?DEFAULT_META, State).
 
-token(Id, Value, Loc) ->
-    token(Id, Value, ?DEFAULT_META, Loc).
+text_token(Text, Metadata, #state{} = State) ->
+    Anno = bel_scan_anno:new(#{
+        src => State#state.src,
+        loc => State#state.prev_loc,
+        end_loc => State#state.loc,
+        text => Text
+    }),
+    token(text, Anno, Metadata).
 
-token(Id, Value, Metadata, Loc) ->
-    {Id, anno(Loc, Metadata), Value}.
+token(Id, Anno) ->
+    {Id, Anno, ?DEFAULT_META}.
+
+token(Id, Anno, Metadata) when is_atom(Id) ->
+    true = bel_scan_anno:is_anno(Anno),
+    {Id, Anno, Metadata}.
 
 push_token(Token, #state{tokens = Tokens} = State) ->
     State#state{tokens = Tokens ++ [Token]}.
@@ -149,6 +163,12 @@ lookup_engine(Mod, #state{engines = Engines}) ->
 %%%=====================================================================
 %%% State getters and setters functions
 %%%=====================================================================
+
+get_src(#state{src = Src}) ->
+    Src.
+
+set_src(Src, #state{} = State) ->
+    State#state{src = Src}.
 
 get_engines(#state{engines = Engines}) ->
     Engines.
@@ -219,11 +239,17 @@ continue(find_start_markers, <<Rest0/binary>>, State0) ->
     case find_marker(State0#state.engines, Rest0) of
         {match, {Mod, MarkerId, MatchText, Captured, Rest}} ->
             State1 = handle_text(State0),
-            InitLoc = State1#state.loc,
+            Loc = State1#state.loc,
             EndLoc = bel_scan_loc:read(MatchText, State1#state.loc),
+            Anno = bel_scan_anno:new(#{
+                src => State1#state.src,
+                loc => Loc,
+                end_loc => EndLoc,
+                text => MatchText
+            }),
+            Match = {Mod, MarkerId, Captured, Anno},
             Pos = bel_scan_loc:get_pos(EndLoc),
             BPart = reset_bpart_pos(Pos, State1),
-            Match = {Mod, MarkerId, MatchText, Captured, {InitLoc, EndLoc}},
             continue({handle_match, Match}, Rest, State1#state{
                 loc = EndLoc,
                 prev_loc = EndLoc,
@@ -330,11 +356,6 @@ do_handle_terminate([{Mod, _Eng} | Engs], Tokens0, State0) ->
     end;
 do_handle_terminate([], Tokens, State) ->
     State#state{tokens = Tokens}.
-
-anno({InitLoc0, EndLoc0}, Metadata) ->
-    InitLoc = bel_scan_loc:to_tuple(InitLoc0),
-    EndLoc = bel_scan_loc:to_tuple(EndLoc0),
-    {{InitLoc, EndLoc}, Metadata}.
 
 clear_text(#state{loc = Loc} = State) ->
     Pos = bel_scan_loc:get_pos(Loc),

@@ -58,14 +58,12 @@ handle_text(_Text, State) ->
     {noreply, State}.
 
 % nested case
-handle_match({?MODULE, expr, _Text, [Expr], Loc}, State) ->
-    Token = bel_scan:token(expr, Expr, Loc),
-    {reply, [Token], State};
+handle_match({?MODULE, expr, [Expr], Anno}, State) ->
+    {reply, [token(Anno, Expr)], State};
 % simple case
-handle_match({?MODULE, expr, _Text, [<<>>, Expr], Loc}, State) ->
-    Token = bel_scan:token(expr, Expr, Loc),
-    {reply, [Token], State};
-handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
+handle_match({?MODULE, expr, [<<>>, Expr], Anno}, State) ->
+    {reply, [token(Anno, Expr)], State};
+handle_match({Mod, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->
@@ -75,4 +73,10 @@ handle_terminate(_Tokens, State) ->
 %%% Internal functions
 %%%=====================================================================
 
-% nothing here yet!
+token(Anno, Expr) ->
+    bel_scan:token(expr, Anno, scan(Expr)).
+
+scan(Expr) ->
+    {ok, Tokens, _} = erl_scan:string(binary_to_list(<<Expr/binary, $.>>)),
+    {ok, AST} = erl_parse:parse_exprs(Tokens),
+    AST.

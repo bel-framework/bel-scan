@@ -55,6 +55,7 @@
 -type state()     :: term().
 -type re_group()  :: binary().
 -type captured()  :: [re_group()].
+-type anno()      :: bel_scan_anno:t().
 
 %%%=====================================================================
 %%% Callbacks
@@ -82,14 +83,11 @@
                  .
 
 -callback handle_match(Match, Scan) -> Return
-    when Match     :: {MarkerMod, MarkerId, Text, Captured, Loc}
+    when Match     :: {MarkerMod, MarkerId, Captured, Anno}
        , MarkerMod :: module()
        , MarkerId  :: marker_id()
-       , Text      :: binary()
        , Captured  :: captured()
-       , Loc       :: {InitLoc, EndLoc}
-       , InitLoc   :: loc()
-       , EndLoc    :: loc()
+       , Anno      :: anno()
        , Scan      :: scan()
        , Return    :: {noreply, scan()}
                     | {reply, [token()], scan()}

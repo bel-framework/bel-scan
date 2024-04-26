@@ -72,11 +72,11 @@ handle_start(_Bin, State) ->
 handle_text(_Text, State) ->
     {noreply, State}.
 
-handle_match({?MODULE, MarkerId, _Text, Captured, Loc}, State) ->
+handle_match({?MODULE, MarkerId, Captured, Anno}, State) ->
     [Expr] = Captured,
-    Token = bel_scan:token(MarkerId, Expr, Loc),
+    Token = bel_scan:token(MarkerId, Anno, Expr),
     {reply, [Token], State};
-handle_match({Mod, _, _, _, _}, State) when Mod =/= ?MODULE ->
+handle_match({Mod, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
 handle_terminate(_Tokens, State) ->
@@ -126,27 +126,93 @@ scan_(Bin) ->
 scan_test() ->
     [ { "Should scan single line"
       , ?assertEqual([
-            {text,{{{1,1},{1,3}},undefined},<<"a ">>},
-            {inline,{{{1,3},{1,12}},undefined},<<"b">>},
-            {text,{{{1,12},{1,15}},undefined},<<" c ">>},
-            {start,{{{1,15},{1,23}},undefined},<<"d">>},
-            {text,{{{1,23},{1,26}},undefined},<<" e ">>},
-            {continue,{{{1,26},{1,33}},undefined},<<"f">>},
-            {text,{{{1,33},{1,36}},undefined},<<" g ">>},
-            {terminate,{{{1,36},{1,44}},undefined},<<"h">>},
-            {text,{{{1,44},{1,46}},undefined},<<" i">>}
+            {text,{anno,string,{loc,0,1,1,1,1},{loc,2,1,3,1,1},<<"a ">>},
+                    undefined},
+            {inline,{anno,string,
+                            {loc,2,1,3,1,1},
+                            {loc,11,1,12,1,1},
+                            <<"<%= b .%>">>},
+                    <<"b">>},
+            {text,{anno,string,
+                        {loc,11,1,12,1,1},
+                        {loc,14,1,15,1,1},
+                        <<" c ">>},
+                    undefined},
+            {start,{anno,string,
+                        {loc,14,1,15,1,1},
+                        {loc,22,1,23,1,1},
+                        <<"<%= d %>">>},
+                    <<"d">>},
+            {text,{anno,string,
+                        {loc,22,1,23,1,1},
+                        {loc,25,1,26,1,1},
+                        <<" e ">>},
+                    undefined},
+            {continue,{anno,string,
+                            {loc,25,1,26,1,1},
+                            {loc,32,1,33,1,1},
+                            <<"<% f %>">>},
+                        <<"f">>},
+            {text,{anno,string,
+                        {loc,32,1,33,1,1},
+                        {loc,35,1,36,1,1},
+                        <<" g ">>},
+                    undefined},
+            {terminate,{anno,string,
+                            {loc,35,1,36,1,1},
+                            {loc,43,1,44,1,1},
+                            <<"<% h .%>">>},
+                        <<"h">>},
+            {text,{anno,string,
+                        {loc,43,1,44,1,1},
+                        {loc,45,1,46,1,1},
+                        <<" i">>},
+                    undefined}
         ], scan_(?SLINE))}
     , { "Should scan multiple lines"
       , ?assertEqual([
-            {text,{{{1,1},{1,3}},undefined},<<"a ">>},
-            {inline,{{{1,3},{2,4}},undefined},<<"b">>},
-            {text,{{{2,4},{2,7}},undefined},<<" c ">>},
-            {start,{{{2,7},{3,5}},undefined},<<"d">>},
-            {text,{{{3,5},{4,1}},undefined},<<" e\n">>},
-            {continue,{{{4,1},{6,3}},undefined},<<"f">>},
-            {text,{{{6,3},{10,1}},undefined},<<"\n\n   g\n\n">>},
-            {terminate,{{{10,1},{14,13}},undefined},<<"h">>},
-            {text,{{{14,13},{18,1}},undefined},<<"\n\ni\n\n">>}
+            {text,{anno,string,{loc,0,1,1,1,1},{loc,2,1,3,1,1},<<"a ">>},
+                    undefined},
+            {inline,{anno,string,
+                            {loc,2,1,3,1,1},
+                            {loc,11,2,4,1,1},
+                            <<"<%= b\n.%>">>},
+                    <<"b">>},
+            {text,{anno,string,
+                        {loc,11,2,4,1,1},
+                        {loc,14,2,7,1,1},
+                        <<" c ">>},
+                    undefined},
+            {start,{anno,string,
+                        {loc,14,2,7,1,1},
+                        {loc,22,3,5,1,1},
+                        <<"<%=\nd %>">>},
+                    <<"d">>},
+            {text,{anno,string,
+                        {loc,22,3,5,1,1},
+                        {loc,25,4,1,1,1},
+                        <<" e\n">>},
+                    undefined},
+            {continue,{anno,string,
+                            {loc,25,4,1,1,1},
+                            {loc,33,6,3,1,1},
+                            <<"<% f\n\n%>">>},
+                        <<"f">>},
+            {text,{anno,string,
+                        {loc,33,6,3,1,1},
+                        {loc,41,10,1,1,1},
+                        <<"\n\n   g\n\n">>},
+                    undefined},
+            {terminate,{anno,string,
+                            {loc,41,10,1,1,1},
+                            {loc,60,14,13,1,1},
+                            <<"<%\n\nh\n\n         .%>">>},
+                        <<"h">>},
+            {text,{anno,string,
+                        {loc,60,14,13,1,1},
+                        {loc,65,18,1,1,1},
+                        <<"\n\ni\n\n">>},
+                    undefined}
         ], scan_(?MLINE))}
     ].
 
