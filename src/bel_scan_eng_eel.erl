@@ -44,24 +44,28 @@ init(_Opts) ->
     #engine{
         markers = [
             #marker{
-                id = inline,
-                re = <<"<%=\\s+((?:(?!<%).)*)\\s+\.%>">>
+                id = '<%=',
+                re = "<%="
             },
             #marker{
-                id = start,
-                re = <<"<%=\\s+((?:(?!<%).)*)\\s+%>">>
+                id = '.%>',
+                re = "\\.\\s*%>"
             },
             #marker{
-                id = continue,
-                re = <<"<%\\s+((?:(?!<%).)*)\\s+%>">>
+                id = '<%',
+                re = "<%(?:(?!=))"
             },
             #marker{
-                id = terminate,
-                re = <<"<%\\s+((?:(?!<%).)*)\\s+\.%>">>
+                id = '%>',
+                re = "(?:(?!\\.))%>"
             },
             #marker{
-                id = comment,
-                re = <<"<%!--\s+((?:(?!<%).)*)\s+--%>">>
+                id = '<%!--',
+                re = "<%!--"
+            },
+            #marker{
+                id = '--%>',
+                re = "--%>"
             }
         ]
     }.
@@ -72,9 +76,8 @@ handle_start(_Bin, State) ->
 handle_text(_Text, State) ->
     {noreply, State}.
 
-handle_match({?MODULE, MarkerId, Captured, Anno}, State) ->
-    [Expr] = Captured,
-    Token = bel_scan:token(MarkerId, Anno, Expr),
+handle_match({?MODULE, MarkerId, [], Anno}, State) ->
+    Token = bel_scan:token(MarkerId, Anno),
     {reply, [Token], State};
 handle_match({Mod, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
