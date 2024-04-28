@@ -44,6 +44,7 @@
 -type t()  :: #marker{}.
 -type id() :: atom().
 -type re() :: binary()
+            | string()
             | {re_pattern, _, _, _, _} % re:mp/0 isn't exported.
             .
 
@@ -59,7 +60,7 @@ compile(#marker{} = Marker) ->
             error({re, Reason}, [Marker])
     end.
 
-compile_re(RE) when is_binary(RE) ->
+compile_re(RE) when is_binary(RE); is_list(RE) ->
     re:compile(RE, [anchored, multiline, ucp, {newline, anycrlf}]);
 compile_re(Pattern) when ?is_re_pattern(Pattern) ->
     {ok, Pattern}.
