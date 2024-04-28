@@ -75,6 +75,10 @@
 -define(DEFAULT_OPTS, #{}).
 -define(DEFAULT_META, undefined).
 
+-define(is_anno(X), (
+    is_tuple(X) andalso element(1, X) =:= anno
+)).
+
 -record(state, { src      :: src()
                , engines  :: [{module(), engine()}]
                , bpart    :: bpart()
@@ -144,8 +148,7 @@ text_token(Text, Metadata, #state{} = State) ->
 token(Id, Anno) ->
     {Id, Anno, ?DEFAULT_META}.
 
-token(Id, Anno, Metadata) when is_atom(Id) ->
-    true = bel_scan_anno:is_anno(Anno),
+token(Id, Anno, Metadata) when is_atom(Id), ?is_anno(Anno) ->
     {Id, Anno, Metadata}.
 
 push_token(Token, #state{tokens = Tokens} = State) ->

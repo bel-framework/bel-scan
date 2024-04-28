@@ -22,7 +22,7 @@
 -module(bel_scan_anno).
 
 % API functions
--export([ new/1, is_anno/1 ]).
+-export([ new/1 ]).
 
 % State getters and setters functions
 -export([ get_src/1
@@ -64,9 +64,6 @@ new(Params) when is_map(Params) ->
         end_loc = maps:get(end_loc, Params),
         text = maps:get(text, Params)
     }.
-
-is_anno(X) ->
-    is_record(X, anno).
 
 %%%=====================================================================
 %%% State getters and setters functions
