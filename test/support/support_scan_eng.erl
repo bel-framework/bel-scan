@@ -74,7 +74,11 @@ handle_terminate(_Tokens, State) ->
 %%%=====================================================================
 
 token(Anno, Expr) ->
-    bel_scan:token(expr, Anno, scan(Expr)).
+    bel_scan_token:new(#{
+        id => expr,
+        anno => Anno,
+        metadata => scan(Expr)
+    }).
 
 scan(Expr) ->
     {ok, Tokens, _} = erl_scan:string(binary_to_list(<<Expr/binary, $.>>)),

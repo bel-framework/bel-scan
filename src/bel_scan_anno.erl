@@ -22,7 +22,7 @@
 -module(bel_scan_anno).
 
 % API functions
--export([ new/1 ]).
+-export([ new/1, to_yecc/1 ]).
 
 % State getters and setters functions
 -export([ get_src/1
@@ -64,6 +64,19 @@ new(Params) when is_map(Params) ->
         end_loc = maps:get(end_loc, Params),
         text = maps:get(text, Params)
     }.
+
+to_yecc(#anno{loc = Loc, text = Text, src = Src}) ->
+    Anno0 = erl_anno:new(bel_scan_loc:to_tuple(Loc)),
+    Anno = erl_anno:set_text(binary_to_list(Text), Anno0),
+    case Src of
+        {file, File} ->
+            erl_anno:set_file(File, Anno);
+        {module, Mod} ->
+            File = proplists:get_value(source, Mod:module_info(compile)),
+            erl_anno:set_file(File, Anno);
+        string ->
+            Anno
+    end.
 
 %%%=====================================================================
 %%% State getters and setters functions

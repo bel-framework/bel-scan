@@ -61,16 +61,13 @@ handle_text(_Text, State) ->
 
 % case double quote
 handle_match({?MODULE, attribute, [K, V], Anno}, State) ->
-    Token = bel_scan:token(attribute, Anno, {K, V}),
-    {reply, [Token], State};
+    {reply, [attribute_token(Anno, {K, V})], State};
 % case single quote
 handle_match({?MODULE, attribute, [<<>>, <<>>, K, V], Anno}, State) ->
-    Token = bel_scan:token(attribute, Anno, {K, V}),
-    {reply, [Token], State};
+    {reply, [attribute_token(Anno, {K, V})], State};
 % case attribute
 handle_match({?MODULE, attribute, [<<>>, <<>>, <<>>, <<>>, K], Anno}, State) ->
-    Token = bel_scan:token(attribute, Anno, K),
-    {reply, [Token], State};
+    {reply, [attribute_token(Anno, K)], State};
 handle_match({Mod, _, _, _}, State) when Mod =/= ?MODULE ->
     {noreply, State}.
 
@@ -81,4 +78,9 @@ handle_terminate(_Tokens, State) ->
 %%% Internal functions
 %%%=====================================================================
 
-% nothing here yet!
+attribute_token(Anno, Metadata) ->
+    bel_scan_token:new(#{
+        id => attribute,
+        anno => Anno,
+        metadata => Metadata
+    }).

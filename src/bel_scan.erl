@@ -28,14 +28,13 @@
         , state/1
         , state/2
         , fold/2
-        , text_token/2
-        , text_token/3
-        , token/2
-        , token/3
-        , push_token/2
-        , push_tokens/2
         , init_engines/1
         , lookup_engine/2
+        , text_token/2
+        , text_token/3
+        , push_token/2
+        , push_tokens/2
+        , yecc_tokens/1
         ]).
 
 % State getters and setters functions
@@ -58,13 +57,8 @@
              , engine/0
              , bpart/0
              , loc/0
-             , token/0
-             , token_id/0
-             , token_anno/0
-             , token_metadata/0
-             , token_loc/0
-             , token_value/0
              , pos/0
+             , token/0
              ]).
 
 -import(bel_scan_loc,   [ new_ln/1, incr_col/2 ]).
@@ -75,10 +69,6 @@
 -define(DEFAULT_OPTS, #{}).
 -define(DEFAULT_META, undefined).
 
--define(is_anno(X), (
-    is_tuple(X) andalso element(1, X) =:= anno
-)).
-
 -record(state, { src      :: src()
                , engines  :: [{module(), engine()}]
                , bpart    :: bpart()
@@ -88,18 +78,13 @@
                , init_pos :: pos()
                }).
 
--opaque t()            :: #state{}.
--type src()            :: bel_scan_anno:src().
--type engine()         :: bel_scan_eng:t().
--type bpart()          :: bel_scan_bpart:t().
--type loc()            :: bel_scan_loc:t().
--type token()          :: {token_id(), token_anno(), token_value()}.
--type token_id()       :: atom().
--type token_anno()     :: {{token_loc(), token_loc()}, token_metadata()}.
--type token_metadata() :: term().
--type token_loc()      :: bel_scan_loc:pos_tuple().
--type token_value()    :: binary().
--type pos()            :: bel_scan_loc:pos().
+-opaque t()    :: #state{}.
+-type src()    :: bel_scan_anno:src().
+-type engine() :: bel_scan_eng:t().
+-type bpart()  :: bel_scan_bpart:t().
+-type loc()    :: bel_scan_loc:t().
+-type pos()    :: bel_scan_loc:pos().
+-type token()  :: bel_scan_token:t().
 
 %%%=====================================================================
 %%% API functions
@@ -133,23 +118,26 @@ state(Bin, #state{bpart = BPart} = State) when is_binary(Bin) ->
 fold(#state{} = State, Funs) ->
     lists:foldl(fun(F, S) -> F(S) end, State, Funs).
 
+init_engines(Modules) ->
+    [init_engine(Mod) || Mod <- Modules].
+
+lookup_engine(Mod, #state{engines = Engines}) ->
+    proplists:lookup(Mod, Engines).
+
 text_token(Text, State) ->
     text_token(Text, ?DEFAULT_META, State).
 
 text_token(Text, Metadata, #state{} = State) ->
-    Anno = bel_scan_anno:new(#{
-        src => State#state.src,
-        loc => State#state.prev_loc,
-        end_loc => State#state.loc,
-        text => Text
-    }),
-    token(text, Anno, Metadata).
-
-token(Id, Anno) ->
-    {Id, Anno, ?DEFAULT_META}.
-
-token(Id, Anno, Metadata) when is_atom(Id), ?is_anno(Anno) ->
-    {Id, Anno, Metadata}.
+    bel_scan_token:new(#{
+        id => text,
+        anno => bel_scan_anno:new(#{
+            src => State#state.src,
+            loc => State#state.prev_loc,
+            end_loc => State#state.loc,
+            text => Text
+        }),
+        metadata => Metadata
+    }).
 
 push_token(Token, #state{tokens = Tokens} = State) ->
     State#state{tokens = Tokens ++ [Token]}.
@@ -157,11 +145,8 @@ push_token(Token, #state{tokens = Tokens} = State) ->
 push_tokens(Tokens, State) when is_list(Tokens) ->
     lists:foldl(fun push_token/2, State, Tokens).
 
-init_engines(Modules) ->
-    [init_engine(Mod) || Mod <- Modules].
-
-lookup_engine(Mod, #state{engines = Engines}) ->
-    proplists:lookup(Mod, Engines).
+yecc_tokens(#state{tokens = Tokens}) ->
+    [bel_scan_token:to_yecc(Token) || Token <- Tokens].
 
 %%%=====================================================================
 %%% State getters and setters functions

@@ -22,6 +22,7 @@
 -module(bel_scan_SUITE).
 
 % -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 
 %% Callback functions
 -export([ suite/0
@@ -139,19 +140,25 @@ bin(Config) when is_list(Config) ->
     },
 
     SingleLnBin = <<"foo {{ {{A, b}, {0, \"C\"}} }} bar">>,
-    [
-        {text,{anno,string,{loc,0,1,1,1,1},{loc,4,1,5,1,1},<<"foo ">>},
-                undefined},
-        {expr,{anno,string,
+    ?assertEqual([
+        {token,text,
+            {anno,string,{loc,0,1,1,1,1},{loc,4,1,5,1,1},<<"foo ">>},
+            undefined},
+        {token,expr,
+            {anno,string,
                     {loc,4,1,5,1,1},
                     {loc,28,1,29,1,1},
                     <<"{{ {{A, b}, {0, \"C\"}} }}">>},
-                [{tuple,1,
-                        [{tuple,1,[{var,1,'A'},{atom,1,b}]},
+            [{tuple,1,
+                    [{tuple,1,[{var,1,'A'},{atom,1,b}]},
                         {tuple,1,[{integer,1,0},{string,1,"C"}]}]}]},
-        {text,{anno,string,{loc,28,1,29,1,1},{loc,32,1,33,1,1},<<" bar">>},
-                undefined}
-    ] = bel_scan:get_tokens(bel_scan:bin(SingleLnBin, Opts)),
+        {token,text,
+            {anno,string,
+                    {loc,28,1,29,1,1},
+                    {loc,32,1,33,1,1},
+                    <<" bar">>},
+            undefined}
+    ], bel_scan:get_tokens(bel_scan:bin(SingleLnBin, Opts))),
 
     MultiLnBin = <<"foo
     {{ {{A, b},
@@ -162,40 +169,48 @@ bin(Config) when is_list(Config) ->
 
 }}
 ">>,
-    [
-        {text,{anno,string,
+    ?assertEqual([
+        {token,text,
+            {anno,string,
                     {loc,0,1,1,1,1},
                     {loc,8,2,5,1,1},
                     <<"foo\n    ">>},
-                undefined},
-        {expr,{anno,string,
+            undefined},
+        {token,expr,
+            {anno,string,
                     {loc,8,2,5,1,1},
                     {loc,40,3,21,1,1},
                     <<"{{ {{A, b},\n        {0, \"C\"}} }}">>},
-                [{tuple,1,
-                        [{tuple,1,[{var,1,'A'},{atom,1,b}]},
+            [{tuple,1,
+                    [{tuple,1,[{var,1,'A'},{atom,1,b}]},
                         {tuple,2,[{integer,2,0},{string,2,"C"}]}]}]},
-        {text,{anno,string,
+        {token,text,
+            {anno,string,
                     {loc,40,3,21,1,1},
                     {loc,47,6,1,1,1},
                     <<"\n bar\n\n">>},
-                undefined},
-        {expr,{anno,string,
+            undefined},
+        {token,expr,
+            {anno,string,
                     {loc,47,6,1,1,1},
                     {loc,66,6,20,1,1},
                     <<"{{ {{ {{ d }} }} }}">>},
-                [{tuple,1,
-                        [{tuple,1,[{tuple,1,[{tuple,1,[{atom,1,d}]}]}]}]}]},
-        {text,{anno,string,{loc,66,6,20,1,1},{loc,68,6,22,1,1},<<"  ">>},
-                undefined},
-        {expr,{anno,string,
+            [{tuple,1,
+                    [{tuple,1,
+                            [{tuple,1,[{tuple,1,[{atom,1,d}]}]}]}]}]},
+        {token,text,
+            {anno,string,{loc,66,6,20,1,1},{loc,68,6,22,1,1},<<"  ">>},
+            undefined},
+        {token,expr,
+            {anno,string,
                     {loc,68,6,22,1,1},
                     {loc,76,8,3,1,1},
                     <<"{{ a\n\n}}">>},
-                [{atom,1,a}]},
-        {text,{anno,string,{loc,76,8,3,1,1},{loc,77,9,1,1,1},<<"\n">>},
-                undefined}
-    ] = bel_scan:get_tokens(bel_scan:bin(MultiLnBin, Opts)),
+            [{atom,1,a}]},
+        {token,text,
+            {anno,string,{loc,76,8,3,1,1},{loc,77,9,1,1,1},<<"\n">>},
+            undefined}
+    ], bel_scan:get_tokens(bel_scan:bin(MultiLnBin, Opts))),
 
     ok.
 
