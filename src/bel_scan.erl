@@ -22,508 +22,333 @@
 -module(bel_scan).
 -compile(inline_list_funcs).
 
-% API
+% API functions
 -export([ new/1
-        , string/2
-        , continue/2
-        , skip_new_lns/2
-        , terminate/1
-        , new_ln/1
-        , incr_col/1
-        , incr_col/2
-        , snapshot/1
-        , update_pos/1
-        , pos_text/1
-        , anno/1
-        , anno/2
-        , anno/3
-        , token/2
-        , token/3
+        , bin/2
+        , state/1
+        , state/2
+        , fold/2
+        , init_engines/1
+        , lookup_engine/2
+        , text_token/2
+        , text_token/3
         , push_token/2
         , push_tokens/2
-        , fold/2
+        , yecc_tokens/1
         ]).
 
-% State get/set
--export([ get/2
-        , set/3
-        , get_input/1
-        , set_input/2
-        , get_handler/1
-        , set_handler/2
-        , get_handler_state/1
-        , set_handler_state/2
-        , get_tokens/1
-        , set_tokens/2
-        , get_ln/1
-        , set_ln/2
-        , get_col/1
-        , set_col/2
+% State getters and setters functions
+-export([ get_src/1
+        , set_src/2
+        , get_engines/1
+        , set_engines/2
+        , get_bpart/1
+        , set_bpart/2
         , get_loc/1
         , set_loc/2
-        , get_snap_loc/1
-        , set_snap_loc/2
-        , get_buffer_pos/1
-        , set_buffer_pos/2
-        , get_pos/1
-        , set_pos/2
-        , get_len/1
-        , set_len/2
-        , get_source/1
-        , set_source/2
+        , get_prev_loc/1
+        , set_prev_loc/2
+        , get_tokens/1
+        , set_tokens/2
         ]).
 
 -export_type([ t/0
-             , input/0
-             , rest/0
-             , handler/0
-             , handler_opts/0
-             , handler_state/0
-             , tag/0
-             , metadata/0
-             , anno/0
-             , value/0
+             , src/0
+             , engine/0
+             , bpart/0
+             , loc/0
+             , pos/0
              , token/0
-             , line/0
-             , column/0
-             , location/0
-             , position/0
-             , length/0
-             , result/0
              ]).
 
-% Callbacks
+-import(bel_scan_loc,   [ new_ln/1, incr_col/2 ]).
+-import(bel_scan_bpart, [ incr_len/2, get_part/1 ]).
 
--callback init(handler_opts()) -> {ok, handler_state()}.
+-include("bel_scan_eng.hrl").
 
--callback handle_char(char(), rest(), t()) -> t().
+-define(DEFAULT_OPTS, #{}).
+-define(DEFAULT_META, undefined).
 
--callback handle_tokens([token()], t()) -> result().
-
-% Libs
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
-% Macros
-
--define(is_ln(X), (
-    is_integer(X) andalso X >= 1
-)).
-
--define(is_col(X), (
-    is_integer(X) andalso X >= 1
-)).
-
--define(is_loc(X), (
-    is_tuple(X)
-    andalso tuple_size(X) =:= 2
-    andalso ?is_ln(element(1, X))
-    andalso ?is_col(element(2, X))
-)).
-
--define(is_position(X), (
-    is_integer(X) andalso X >= 0
-)).
-
--define(is_length(X), (
-    is_integer(X) andalso X >= 0
-)).
-
--define(is_filename(X), (
-    is_list(X) orelse is_binary(X)
-)).
-
--define(is_source(X), (
-    X =:= undefined
-    orelse (
-        is_tuple(X)
-        andalso tuple_size(X) =:= 2
-        andalso (
-            (
-                element(1, X) =:= file
-                andalso ?is_filename(element(2, X))
-            )
-            orelse (
-                element(1, X) =:= module
-                andalso is_atom(element(2, X))
-            )
-        )
-    )
-)).
-
--define(valid_params(Input, Handler), (
-    is_binary(Input) andalso is_atom(Handler)
-)).
-
--define(is_anno(X), (
-    is_tuple(X)
-    andalso tuple_size(X) =:= 3
-    andalso ?is_loc(element(1, X))
-    andalso (
-        element(2, X) =:= undefined
-        orelse ?is_filename(element(2, X))
-    )
-)).
-
--define(is_token(X), (
-    is_tuple(X)
-    andalso tuple_size(X) =:= 3
-    andalso ?is_anno(element(2, X))
-)).
-
--define(DEFAULTS, #{
-    handler_state => undefined,
-    tokens => [],
-    ln => 1,
-    col => 1,
-    snap_loc => {1, 1},
-    buffer_pos => 0,
-    pos => 0,
-    len => 0,
-    source => undefined
-}).
-
-% Types
-
--record(state, { input         :: input()
-               , handler       :: handler()
-               , handler_state :: handler_state()
-               , tokens        :: [token()]
-               , ln            :: line()
-               , col           :: column()
-               , snap_loc      :: location()
-               , buffer_pos    :: position()
-               , pos           :: position()
-               , len           :: length()
-               , source        :: source()
+-record(state, { src      :: src()
+               , engines  :: [{module(), engine()}]
+               , bpart    :: bpart()
+               , loc      :: loc()
+               , prev_loc :: loc()
+               , tokens   :: [token()]
+               , init_pos :: pos()
                }).
 
--opaque t()           :: #state{}.
--type input()         :: binary().
--type rest()          :: bitstring().
--type handler()       :: module().
--type handler_opts()  :: term().
--type handler_state() :: term().
--type line()          :: pos_integer().
--type column()        :: pos_integer().
--type location()      :: {line(), column()}.
--type position()      :: non_neg_integer().
--type length()        :: non_neg_integer().
--type tag()           :: term().
--type metadata()      :: term().
--type filename()      :: file:filename_all() | undefined.
--type anno()          :: {location(), source(), metadata()}.
--type value()         :: term().
--type token()         :: {tag(), anno(), value()}.
--type source()        :: {file, filename()}
-                       | {module, module()}
-                       | undefined
-                       .
--type result()        :: term().
+-opaque t()    :: #state{}.
+-type src()    :: bel_scan_anno:src().
+-type engine() :: bel_scan_eng:t().
+-type bpart()  :: bel_scan_bpart:t().
+-type loc()    :: bel_scan_loc:t().
+-type pos()    :: bel_scan_loc:pos().
+-type token()  :: bel_scan_token:t().
 
 %%%=====================================================================
-%%% API
+%%% API functions
 %%%=====================================================================
 
-% Fixes no return warning because of the false positive of the #state{}.
--dialyzer({nowarn_function, [new/1]}).
-
-new(#{input := I, handler := H} = Params) when ?valid_params(I, H) ->
-    maps:fold(fun set/3, #state{}, maps:merge(?DEFAULTS, Params)).
-
-string(Opts, #state{} = State) ->
-    Handler = State#state.handler,
-    {ok, HandlerState} = Handler:init(Opts),
-    continue(State#state.input, State#state{handler_state = HandlerState}).
-
-continue(<<Rest0/bitstring>>, State0) ->
-    case skip_new_lns(Rest0, State0) of
-        {ok, {Char, Rest, #state{handler = Handler} = State}} ->
-            Handler:handle_char(Char, Rest, State);
-        {eof, State} ->
-            terminate(State)
-    end;
-continue(<<>>, #state{} = State) ->
-    terminate(State).
-
-skip_new_lns(<<$\r, $\n, Rest/bitstring>>, State) ->
-    skip_new_lns(Rest, new_ln(incr_col(State)));
-skip_new_lns(<<$\r, Rest/bitstring>>, State) ->
-    skip_new_lns(Rest, new_ln(incr_col(State)));
-skip_new_lns(<<$\n, Rest/bitstring>>, State) ->
-    skip_new_lns(Rest, new_ln(incr_col(State)));
-skip_new_lns(<<$\f, Rest/bitstring>>, State) ->
-    skip_new_lns(Rest, new_ln(incr_col(State)));
-skip_new_lns(<<Char, Rest/bitstring>>, State) ->
-    {ok, {Char, Rest, State}};
-skip_new_lns(<<>>, State) ->
-    {eof, State}.
-
-terminate(#state{handler = Handler} = State) ->
-    Handler:handle_tokens(State#state.tokens, State).
-
-new_ln(#state{} = State) ->
-    State#state{
-        ln = State#state.ln+1,
-        col = 1
+new(Params) when is_map(Params) ->
+    Loc = maps:get(loc, Params, bel_scan_loc:new(#{})),
+    #state{
+        src = maps:get(src, Params, string),
+        engines = init_engines(maps:get(engines, Params)),
+        bpart = maps:get(bpart, Params, bel_scan_bpart:new(#{
+            bin => maps:get(bin, Params, <<>>)
+        })),
+        loc = Loc,
+        prev_loc = maps:get(prev_loc, Params, Loc),
+        tokens = maps:get(tokens, Params, []),
+        init_pos = maps:get(init_pos, Params, bel_scan_loc:get_pos(Loc))
     }.
 
-incr_col(#state{} = State) ->
-    incr_col(1, State).
+bin(Bin, Opts) when is_binary(Bin) ->
+    start(Bin, new(Opts)).
 
-incr_col(N, #state{} = State) when ?is_col(N) ->
-    State#state{
-        col        = State#state.col + N,
-        buffer_pos = State#state.buffer_pos + N,
-        len        = State#state.len + N
-    }.
+state(#state{bpart = BPart} = State) ->
+    start(bel_scan_bpart:get_bin(BPart), State).
 
-snapshot(#state{} = State) ->
-    State#state{
-        snap_loc = {State#state.ln, State#state.col}
-    }.
+state(Bin, #state{bpart = BPart} = State) when is_binary(Bin) ->
+    start(Bin, State#state{
+        bpart = bel_scan_bpart:set_bin(Bin, BPart)
+    }).
 
-update_pos(#state{} = State) ->
-    State#state{
-        pos = State#state.buffer_pos,
-        len = 0
-    }.
+fold(#state{} = State, Funs) ->
+    lists:foldl(fun(F, S) -> F(S) end, State, Funs).
 
-pos_text(#state{} = State) ->
-    binary_part(State#state.input, State#state.pos, State#state.len).
+init_engines(Modules) ->
+    [init_engine(Mod) || Mod <- Modules].
 
-anno(State) ->
-    anno(undefined, State).
+lookup_engine(Mod, #state{engines = Engines}) ->
+    proplists:lookup(Mod, Engines).
 
-anno(Metadata, #state{} = State) ->
-    anno(get_snap_loc(State), get_source(State), Metadata).
+text_token(Text, State) ->
+    text_token(Text, ?DEFAULT_META, State).
 
-anno(Location, Source, Metadata) when ?is_loc(Location), ?is_source(Source) ->
-    {Location, Source, Metadata}.
+text_token(Text, Metadata, #state{} = State) ->
+    bel_scan_token:new(#{
+        id => text,
+        anno => bel_scan_anno:new(#{
+            src => State#state.src,
+            loc => State#state.prev_loc,
+            end_loc => State#state.loc,
+            text => Text
+        }),
+        metadata => Metadata,
+        engine => ?MODULE
+    }).
 
-token(Tag, #state{} = State) ->
-    {Tag, anno(State), pos_text(State)}.
+push_token(Token, #state{tokens = Tokens} = State) ->
+    State#state{tokens = Tokens ++ [Token]}.
 
-token(Tag, Metadata, #state{} = State) ->
-    {Tag, anno(State), Metadata};
-token(Tag, Anno, Metadata) when ?is_anno(Anno) ->
-    {Tag, Anno, Metadata}.
-
-push_token(Token, #state{} = State) when ?is_token(Token) ->
-    State#state{tokens = [Token | State#state.tokens]}.
-
-push_tokens(Tokens, #state{} = State) when is_list(Tokens) ->
+push_tokens(Tokens, State) when is_list(Tokens) ->
     lists:foldl(fun push_token/2, State, Tokens).
 
-fold(#state{} = State, Funs) when is_list(Funs) ->
-    lists:foldl(fun(Fun, Acc) when is_function(Fun, 1) ->
-        Fun(Acc)
-    end, State, Funs).
+yecc_tokens(#state{tokens = Tokens}) ->
+    [bel_scan_token:to_yecc(Token) || Token <- Tokens].
 
 %%%=====================================================================
-%%% State get/set
+%%% State getters and setters functions
 %%%=====================================================================
 
-get(input, State) ->
-    get_input(State);
-get(handler, State) ->
-    get_handler(State);
-get(handler_state, State) ->
-    get_handler_state(State);
-get(tokens, State) ->
-    get_tokens(State);
-get(ln, State) ->
-    get_ln(State);
-get(col, State) ->
-    get_col(State);
-get(loc, State) ->
-    get_loc(State);
-get(snap_loc, State) ->
-    get_snap_loc(State);
-get(buffer_pos, State) ->
-    get_buffer_pos(State);
-get(pos, State) ->
-    get_pos(State);
-get(len, State) ->
-    get_len(State);
-get(source, State) ->
-    get_source(State).
+get_src(#state{src = Src}) ->
+    Src.
 
-set(input, Value, State) ->
-    set_input(Value, State);
-set(handler, Value, State) ->
-    set_handler(Value, State);
-set(handler_state, Value, State) ->
-    set_handler_state(Value, State);
-set(tokens, Value, State) ->
-    set_tokens(Value, State);
-set(ln, Value, State) ->
-    set_ln(Value, State);
-set(col, Value, State) ->
-    set_col(Value, State);
-set(loc, Value, State) ->
-    set_loc(Value, State);
-set(snap_loc, Value, State) ->
-    set_snap_loc(Value, State);
-set(buffer_pos, Value, State) ->
-    set_buffer_pos(Value, State);
-set(pos, Value, State) ->
-    set_pos(Value, State);
-set(len, Value, State) ->
-    set_len(Value, State);
-set(source, Value, State) ->
-    set_source(Value, State).
+set_src(Src, #state{} = State) ->
+    State#state{src = Src}.
 
-get_input(#state{input = Input}) ->
-    Input.
+get_engines(#state{engines = Engines}) ->
+    Engines.
 
-set_input(Input, #state{} = State) when is_binary(Input) ->
-    State#state{input = Input}.
+set_engines(Engines, #state{} = State) ->
+    State#state{engines = Engines}.
 
-get_handler(#state{handler = Handler}) ->
-    Handler.
+get_bpart(#state{bpart = BPart}) ->
+    BPart.
 
-set_handler(Handler, #state{} = State) when is_atom(Handler) ->
-    State#state{handler = Handler}.
+set_bpart(BPart, #state{} = State) ->
+    State#state{bpart = BPart}.
 
-get_handler_state(#state{handler_state = HandlerState}) ->
-    HandlerState.
+get_loc(#state{loc = Loc}) ->
+    Loc.
 
-set_handler_state(HandlerState, #state{} = State) ->
-    State#state{handler_state = HandlerState}.
+set_loc(Loc, #state{} = State) ->
+    State#state{loc = Loc}.
+
+get_prev_loc(#state{prev_loc = PrevLoc}) ->
+    PrevLoc.
+
+set_prev_loc(PrevLoc, #state{} = State) ->
+    State#state{prev_loc = PrevLoc}.
 
 get_tokens(#state{tokens = Tokens}) ->
     Tokens.
 
-set_tokens(Tokens, #state{} = State) when is_list(Tokens) ->
+set_tokens(Tokens, #state{} = State) ->
     State#state{tokens = Tokens}.
-
-get_ln(#state{ln = Ln}) ->
-    Ln.
-
-set_ln(Ln, #state{} = State) when ?is_ln(Ln) ->
-    State#state{ln = Ln}.
-
-get_col(#state{col = Col}) ->
-    Col.
-
-set_col(Col, #state{} = State) when ?is_col(Col) ->
-    State#state{col = Col}.
-
-get_loc(#state{ln = Ln, col = Col}) ->
-    {Ln, Col}.
-
-set_loc({Ln, Col}, State) when ?is_ln(Ln), ?is_col(Col) ->
-    State#state{
-        ln  = Ln,
-        col = Col
-    }.
-
-get_snap_loc(#state{snap_loc = Col}) ->
-    Col.
-
-set_snap_loc({Ln, Col}, #state{} = State) when ?is_ln(Ln), ?is_col(Col) ->
-    State#state{snap_loc = {Ln, Col}}.
-
-get_buffer_pos(#state{buffer_pos = BufferPos}) ->
-    BufferPos.
-
-set_buffer_pos(BufferPos, #state{} = State) when ?is_position(BufferPos) ->
-    State#state{buffer_pos = BufferPos}.
-
-get_pos(#state{pos = Pos}) ->
-    Pos.
-
-set_pos(Pos, #state{} = State) when ?is_position(Pos) ->
-    State#state{pos = Pos}.
-
-get_len(#state{len = Len}) ->
-    Len.
-
-set_len(Len, #state{} = State) when ?is_length(Len) ->
-    State#state{len = Len}.
-
-get_source(#state{source = Source}) ->
-    Source.
-
-set_source(Source, #state{} = State) when ?is_source(Source) ->
-    State#state{source = Source}.
 
 %%%=====================================================================
 %%% Internal functions
 %%%=====================================================================
 
-% nothing here yet!
+init_engine(Mod) when is_atom(Mod) ->
+    init_engine({Mod, ?DEFAULT_OPTS});
+init_engine({Mod, Opts}) when is_atom(Mod), is_map(Opts) ->
+    {Mod, bel_scan_eng:compile(Mod:init(Opts))};
+init_engine({Mod, #engine{} = Eng}) when is_atom(Mod) ->
+    {Mod, Eng}.
 
-%%%=====================================================================
-%%% Tests
-%%% TODO: All kind of missing tests.
-%%% TODO: Move tests to "../test/bel_scan_SUITE.erl".
-%%%=====================================================================
+start(Bin0, State0) ->
+    State = handle_start(Bin0, State0),
+    Bin = bel_scan_bpart:get_bin(State#state.bpart),
+    continue(find_start_markers, Bin, State).
 
--ifdef(TEST).
--compile([export_all, nowarn_export_all]).
+continue(scan, <<>>, State) ->
+    terminate(State);
+continue(find_start_markers, <<>>, State) ->
+    terminate(State);
+continue(scan, <<Rest0/binary>>, State) ->
+    case bel_scan_read:bin(Rest0) of
+        {{new_ln, Incr}, Rest} ->
+            continue(find_start_markers, Rest, fold(State, [
+                fun(S) -> S#state{loc = new_ln(S#state.loc)} end,
+                fun(S) -> S#state{bpart = incr_len(Incr, S#state.bpart)} end
+            ]));
+        {{continue, Incr}, Rest} ->
+            continue(find_start_markers, Rest, fold(State, [
+                fun(S) -> S#state{loc = incr_col(Incr, S#state.loc)} end,
+                fun(S) -> S#state{bpart = incr_len(Incr, S#state.bpart)} end
+            ]));
+        terminate ->
+            terminate(State)
+    end;
+continue(find_start_markers, <<Rest0/binary>>, State0) ->
+    case find_marker(State0#state.engines, Rest0) of
+        {match, {Mod, MarkerId, MatchText, Captured, Rest}} ->
+            State1 = handle_text(State0),
+            Loc = State1#state.loc,
+            EndLoc = bel_scan_loc:read(MatchText, State1#state.loc),
+            Anno = bel_scan_anno:new(#{
+                src => State1#state.src,
+                loc => Loc,
+                end_loc => EndLoc,
+                text => MatchText
+            }),
+            Match = {Mod, MarkerId, Captured, Anno},
+            Pos = bel_scan_loc:get_pos(EndLoc),
+            BPart = reset_bpart_pos(Pos, State1),
+            continue({handle_match, Match}, Rest, State1#state{
+                loc = EndLoc,
+                prev_loc = EndLoc,
+                bpart = BPart
+            });
+        nomatch ->
+            continue(scan, Rest0, State0)
+    end;
+continue({handle_match, Match}, Rest, State0) ->
+    State = handle_match(Match, State0),
+    continue(find_start_markers, Rest, State).
 
-% Callbacks
+terminate(State0) ->
+    State = handle_text(State0),
+    handle_terminate(State).
 
-init([]) ->
-    {ok, []}.
+find_marker([{Mod, Eng} | Engs], Bin) ->
+    Markers = bel_scan_eng:get_markers(Eng),
+    case do_find_marker(Markers, Bin) of
+        {match, {Marker, MatchText, Captured, Rest}} ->
+            MarkerId = bel_scan_mark:get_id(Marker),
+            {match, {Mod, MarkerId, MatchText, Captured, Rest}};
+        nomatch ->
+            find_marker(Engs, Bin)
+    end;
+find_marker([], _) ->
+    nomatch.
 
-handle_char(_Char, Rest, State) ->
-    continue(Rest, snapshot(incr_col(State))).
+do_find_marker([Marker | Markers], Bin) ->
+    case bel_scan_mark:re_match(Marker, Bin) of
+        {match, {MatchText, Captured, Rest}} ->
+            {match, {Marker, MatchText, Captured, Rest}};
+        nomatch ->
+            do_find_marker(Markers, Bin)
+    end;
+do_find_marker([], _) ->
+    nomatch.
 
-handle_tokens(_Tokens, State) ->
+handle_start(Bin, State) ->
+    do_handle_start(State#state.engines, Bin, State).
+
+do_handle_start([{Mod, _Eng} | Engs], Bin0, State0) ->
+    case Mod:handle_start(Bin0, State0) of
+        {noreply, State} ->
+            do_handle_start(Engs, Bin0, State);
+        {reply, Bin, State} ->
+            do_handle_start(Engs, Bin, State);
+        {halt, State} ->
+            State
+    end;
+do_handle_start([], Bin, State) ->
+    BPart = bel_scan_bpart:set_bin(Bin, State#state.bpart),
+    State#state{bpart = BPart}.
+
+handle_text(State) ->
+    handle_text(get_part(State#state.bpart), State).
+
+handle_text(<<>>, State) ->
+    State;
+handle_text(Text, State) ->
+    do_handle_text(State#state.engines, Text, State).
+
+do_handle_text([{Mod, _Eng} | Engs], Text0, State0) ->
+    case Mod:handle_text(Text0, State0) of
+        {noreply, State} ->
+            do_handle_text(Engs, Text0, State);
+        {reply, Text, State} ->
+            do_handle_text(Engs, Text, State);
+        {halt, State} ->
+            State
+    end;
+do_handle_text([], Text, State) ->
+    fold(State, [
+        fun(S) -> push_token(text_token(Text, S), S) end,
+        fun(S) -> clear_text(S) end
+    ]).
+
+handle_match(Match, State) ->
+    do_handle_match(State#state.engines, Match, State).
+
+do_handle_match([{Mod, _Eng} | Engs], Match, State0) ->
+    case Mod:handle_match(Match, State0) of
+        {noreply, State} ->
+            do_handle_match(Engs, Match, State);
+        {reply, Tokens, State} ->
+            do_handle_match(Engs, Match, push_tokens(Tokens, State));
+        {halt, State} ->
+            State
+    end;
+do_handle_match([], _Match, State) ->
     State.
 
-% Support
+handle_terminate(State) ->
+    do_handle_terminate(State#state.engines, State#state.tokens, State).
 
-params(Input) ->
-    #{input => Input, handler => ?MODULE}.
+do_handle_terminate([{Mod, _Eng} | Engs], Tokens0, State0) ->
+    case Mod:handle_terminate(Tokens0, State0) of
+        {noreply, State} ->
+            do_handle_terminate(Engs, Tokens0, State);
+        {reply, Tokens, State} ->
+            do_handle_terminate(Engs, Tokens, State);
+        {halt, State} ->
+            State
+    end;
+do_handle_terminate([], Tokens, State) ->
+    State#state{tokens = Tokens}.
 
-% Runners
+clear_text(#state{loc = Loc} = State) ->
+    Pos = bel_scan_loc:get_pos(Loc),
+    State#state{bpart = reset_bpart_pos(Pos, State)}.
 
-new_test() ->
-    [ { "Should raise 'function_clause' when wrong params"
-      , ?assertError(function_clause, new(#{}))}
-    , { "Should return a valid state"
-        , ?assertEqual(#state{
-            input         = <<>>,
-            handler       = ?MODULE,
-            handler_state = maps:get(handler_state, ?DEFAULTS),
-            tokens        = maps:get(tokens, ?DEFAULTS),
-            ln            = maps:get(ln, ?DEFAULTS),
-            col           = maps:get(col, ?DEFAULTS),
-            snap_loc      = maps:get(snap_loc, ?DEFAULTS),
-            buffer_pos    = maps:get(buffer_pos, ?DEFAULTS),
-            pos           = maps:get(pos, ?DEFAULTS),
-            len           = maps:get(len, ?DEFAULTS),
-            source        = maps:get(source, ?DEFAULTS)
-        }, new(params(<<>>)))}
-    ].
-
-string_test() ->
-    Input = <<"foo\nbar">>,
-    State = string([], new(params(Input))),
-    [ { "Should scan and return the tokens"
-      , ?assertEqual([], get_tokens(State))}
-    , { "Should return correct ln"
-      , ?assertEqual(2, get_ln(State))}
-    , { "Should return correct col"
-      , ?assertEqual(4, get_col(State))}
-    , { "Should return correct loc"
-      , ?assertEqual({2, 4}, get_loc(State))}
-    , { "Should return correct snap_loc"
-      , ?assertEqual({2, 4}, get_snap_loc(State))}
-    , { "Should return correct buffer_pos"
-      , ?assertEqual(7, get_buffer_pos(State))}
-    , { "Should return correct pos"
-      , ?assertEqual(0, get_pos(State))}
-    , { "Should return correct len"
-      , ?assertEqual(7, get_len(State))}
-    , { "Should return correct pos_text"
-      , ?assertEqual(Input, pos_text(State))}
-    ].
-
--endif.
+reset_bpart_pos(Pos, #state{init_pos = InitPos, bpart = BPart}) ->
+    bel_scan_bpart:reset_pos(Pos - InitPos, BPart).

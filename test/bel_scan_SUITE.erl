@@ -22,6 +22,7 @@
 -module(bel_scan_SUITE).
 
 % -include_lib("common_test/include/ct.hrl").
+-include_lib("stdlib/include/assert.hrl").
 
 %% Callback functions
 -export([ suite/0
@@ -33,9 +34,7 @@
         ]).
 
 %% Test cases
--export([ readme_example/1
-        % TODO: bel_scan tests
-        ]).
+-export([ bin/1 ]).
 
 %%%=====================================================================
 %%% Callback functions
@@ -129,19 +128,93 @@ end_per_testcase(_TestCase, _Config) ->
     TestCase :: atom().
 
 all() ->
-    [ readme_example
-    % TODO: bel_scan tests
-    ].
+    [ bin ].
 
 %%%=====================================================================
 %%% Test cases
 %%%=====================================================================
 
-readme_example(Config) when is_list(Config) ->
-    [ {text, {{1,1}, undefined, undefined},<<"foo ">>}
-    , {param, {{1,5}, undefined, undefined}, <<"bar">>}
-    , {text, {{1,14}, undefined, undefined}, <<" baz">>}
-    ] = my_scan:string(<<"foo {{ bar }} baz">>),
+bin(Config) when is_list(Config) ->
+    Opts = #{
+        engines => [support_scan_eng]
+    },
+
+    SingleLnBin = <<"foo {{ {{A, b}, {0, \"C\"}} }} bar">>,
+    ?assertEqual([
+        {token,text,
+            {anno,string,{loc,0,1,1,1,1},{loc,4,1,5,1,1},<<"foo ">>},
+            undefined,bel_scan},
+        {token,expr,
+            {anno,string,
+                    {loc,4,1,5,1,1},
+                    {loc,28,1,29,1,1},
+                    <<"{{ {{A, b}, {0, \"C\"}} }}">>},
+            [{tuple,1,
+                    [{tuple,1,[{var,1,'A'},{atom,1,b}]},
+                        {tuple,1,[{integer,1,0},{string,1,"C"}]}]}],
+            support_scan_eng},
+        {token,text,
+            {anno,string,
+                    {loc,28,1,29,1,1},
+                    {loc,32,1,33,1,1},
+                    <<" bar">>},
+            undefined,bel_scan}
+    ], bel_scan:get_tokens(bel_scan:bin(SingleLnBin, Opts))),
+
+    MultiLnBin = <<"foo
+    {{ {{A, b},
+        {0, \"C\"}} }}
+ bar
+
+{{ {{ {{ d }} }} }}  {{ a
+
+}}
+">>,
+    ?assertEqual([
+        {token,text,
+            {anno,string,
+                    {loc,0,1,1,1,1},
+                    {loc,8,2,5,1,1},
+                    <<"foo\n    ">>},
+            undefined,bel_scan},
+        {token,expr,
+            {anno,string,
+                    {loc,8,2,5,1,1},
+                    {loc,40,3,21,1,1},
+                    <<"{{ {{A, b},\n        {0, \"C\"}} }}">>},
+            [{tuple,1,
+                    [{tuple,1,[{var,1,'A'},{atom,1,b}]},
+                        {tuple,2,[{integer,2,0},{string,2,"C"}]}]}],
+            support_scan_eng},
+        {token,text,
+            {anno,string,
+                    {loc,40,3,21,1,1},
+                    {loc,47,6,1,1,1},
+                    <<"\n bar\n\n">>},
+            undefined,bel_scan},
+        {token,expr,
+            {anno,string,
+                    {loc,47,6,1,1,1},
+                    {loc,66,6,20,1,1},
+                    <<"{{ {{ {{ d }} }} }}">>},
+            [{tuple,1,
+                    [{tuple,1,[{tuple,1,[{tuple,1,[{atom,1,d}]}]}]}]}],
+            support_scan_eng},
+        {token,text,
+            {anno,string,{loc,66,6,20,1,1},{loc,68,6,22,1,1},<<"  ">>},
+            undefined,bel_scan},
+        {token,expr,
+            {anno,string,
+                    {loc,68,6,22,1,1},
+                    {loc,76,8,3,1,1},
+                    <<"{{ a\n\n}}">>},
+            [{atom,1,a}],
+            support_scan_eng},
+        {token,text,
+            {anno,string,{loc,76,8,3,1,1},{loc,77,9,1,1,1},<<"\n">>},
+            undefined,bel_scan}
+    ], bel_scan:get_tokens(bel_scan:bin(MultiLnBin, Opts))),
+
     ok.
 
 %%%=====================================================================
