@@ -136,7 +136,8 @@ text_token(Text, Metadata, #state{} = State) ->
             end_loc => State#state.loc,
             text => Text
         }),
-        metadata => Metadata
+        metadata => Metadata,
+        engine => ?MODULE
     }).
 
 push_token(Token, #state{tokens = Tokens} = State) ->

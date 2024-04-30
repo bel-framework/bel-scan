@@ -31,19 +31,23 @@
         , set_anno/2
         , get_metadata/1
         , set_metadata/2
+        , get_engine/1
+        , set_engine/2
         ]).
 
--export_type([ t/0, id/0, anno/0, metadata/0 ]).
+-export_type([ t/0, id/0, anno/0, metadata/0, engine/0 ]).
 
 -record(token, { id       :: id()
                , anno     :: anno()
                , metadata :: metadata()
+               , engine   :: engine()
                }).
 
--opaque t()      :: #token{}.
+-type t()        :: #token{}.
 -type id()       :: atom().
 -type anno()     :: bel_scan_anno:t().
 -type metadata() :: term().
+-type engine()   :: module().
 
 %%%=====================================================================
 %%% API functions
@@ -53,7 +57,8 @@ new(Params) when is_map(Params) ->
     #token{
         id = maps:get(id, Params),
         anno = maps:get(anno, Params),
-        metadata = maps:get(metadata, Params, undefined)
+        metadata = maps:get(metadata, Params, undefined),
+        engine = maps:get(engine, Params)
     }.
 
 to_yecc(#token{id = Id, anno = Anno, metadata = Metadata}) ->
@@ -80,3 +85,15 @@ get_metadata(#token{metadata = Metadata}) ->
 
 set_metadata(Metadata, #token{} = Token) ->
     Token#token{metadata = Metadata}.
+
+get_engine(#token{engine = Engine}) ->
+    Engine.
+
+set_engine(Engine, #token{} = Token) ->
+    Token#token{engine = Engine}.
+
+%%%=====================================================================
+%%% Internal functions
+%%%=====================================================================
+
+% nothing here yet!

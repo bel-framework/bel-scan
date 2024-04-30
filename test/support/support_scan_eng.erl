@@ -77,7 +77,8 @@ token(Anno, Expr) ->
     bel_scan_token:new(#{
         id => expr,
         anno => Anno,
-        metadata => scan(Expr)
+        metadata => scan(Expr),
+        engine => ?MODULE
     }).
 
 scan(Expr) ->

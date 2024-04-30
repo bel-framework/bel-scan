@@ -80,7 +80,8 @@ handle_terminate(_Tokens, State) ->
 
 attribute_token(Anno, Metadata) ->
     bel_scan_token:new(#{
-        id => attribute,
+        id => html5_attribute,
         anno => Anno,
-        metadata => Metadata
+        metadata => Metadata,
+        engine => ?MODULE
     }).

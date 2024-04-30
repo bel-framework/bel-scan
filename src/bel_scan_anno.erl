@@ -43,7 +43,7 @@
               , text    :: text()
               }).
 
--opaque t()  :: #anno{}.
+-type t()    :: #anno{}.
 -type src()  :: {file, file:filename_all()}
               | {module, module()}
               | string

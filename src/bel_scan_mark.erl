@@ -43,8 +43,7 @@
 
 -type t()  :: #marker{}.
 -type id() :: atom().
--type re() :: binary()
-            | string()
+-type re() :: iodata()
             | {re_pattern, _, _, _, _} % re:mp/0 isn't exported.
             .
 
